@@ -268,12 +268,12 @@ namespace DataManagement
         }
         catch(const CryptoPP::Exception& e)
         {
-            std::cerr << "DataReaderWriter::encrypt() Crypto Error: " << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::encrypt() Crypto Error: " << std::endl << e.what() << std::endl;
             return "";
         }
         catch(const std::exception& e)
         {
-            std::cerr << "DataReaderWriter::encrypt() General Error: " << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::encrypt() General Error: " << std::endl << e.what() << std::endl;
             return "";
         }
     }
@@ -315,12 +315,12 @@ namespace DataManagement
         }
         catch(const CryptoPP::Exception& e)
         {
-            std::cerr << "DataReaderWriter::decrypt() Crypto Error: " << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::decrypt() Crypto Error: " << std::endl << e.what() << std::endl;
             return "";
         }
         catch(const std::exception& e)
         {
-            std::cerr << "DataReaderWriter::decrypt() General Error: " << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::decrypt() General Error: " << std::endl << e.what() << std::endl;
             return "";
         }
     }
@@ -331,7 +331,7 @@ namespace DataManagement
         {
             // Convert GameData to JSON
             std::string jsonData = gamedata.toJson().dump();
-            std::cout << "Debug: GameData to JSON: " << jsonData << std::endl;
+            std::cout << "Debug: GameData to JSON: " << std::endl << jsonData << std::endl;
 
             // Encrypt the JSON data
             std::string encryptedData = encrypt(jsonData);
@@ -362,7 +362,7 @@ namespace DataManagement
         }
         catch(const std::exception& e)
         {
-            std::cerr << "DataReaderWriter::writeData() Error: " << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::writeData() Error: " << std::endl << e.what() << std::endl;
             return false;
         }
     }
@@ -396,7 +396,7 @@ namespace DataManagement
                 return std::nullopt;
             }
 
-            std::cout << "Debug: Decrypted JSON: " << decryptedData << std::endl;
+            std::cout << "Debug: Decrypted JSON: " << std::endl << decryptedData << std::endl;
 
             // Parse the JSON data
             json j = json::parse(decryptedData);
@@ -404,12 +404,12 @@ namespace DataManagement
         }
         catch(const json::exception& e)
         {
-            std::cerr << "DataReaderWriter::readData() JSON Error: " << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::readData() JSON Error: " << std::endl << e.what() << std::endl;
             return std::nullopt;
         }
         catch(const std::exception& e)
         {
-            std::cerr << "DataReaderWriter::readData() Error: " << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::readData() Error: " << std::endl << e.what() << std::endl;
             return std::nullopt;
         }
     }

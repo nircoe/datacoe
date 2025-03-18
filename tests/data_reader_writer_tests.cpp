@@ -11,11 +11,11 @@ namespace DataManagement {
 class DataReaderWriterTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        testFilename = "test_data_rw.data";
+        m_testFilename = "test_data_rw.data";
         // Clean up any leftover files from previous tests
         try {
-            if (std::filesystem::exists(testFilename)) {
-                std::filesystem::remove(testFilename);
+            if (std::filesystem::exists(m_testFilename)) {
+                std::filesystem::remove(m_testFilename);
             }
         } catch (const std::filesystem::filesystem_error&) {
             // Ignore errors if file doesn't exist
@@ -29,8 +29,8 @@ protected:
         // Try to clean up the test file
         for (int i = 0; i < 5; i++) {
             try {
-                if (std::filesystem::exists(testFilename)) {
-                    std::filesystem::remove(testFilename);
+                if (std::filesystem::exists(m_testFilename)) {
+                    std::filesystem::remove(m_testFilename);
                 }
                 break;
             } catch (const std::filesystem::filesystem_error& e) {
@@ -40,7 +40,7 @@ protected:
         }
     }
 
-    std::string testFilename;
+    std::string m_testFilename;
 };
 
 TEST_F(DataReaderWriterTest, WriteAndReadData) {
@@ -49,14 +49,14 @@ TEST_F(DataReaderWriterTest, WriteAndReadData) {
         GameData gd("TestData", 200);
         
         // Write data to file
-        bool writeResult = DataReaderWriter::writeData(gd, testFilename);
+        bool writeResult = DataReaderWriter::writeData(gd, m_testFilename);
         ASSERT_TRUE(writeResult) << "Failed to write data to file";
         
         // Verify file exists
-        ASSERT_TRUE(std::filesystem::exists(testFilename)) << "File was not created";
+        ASSERT_TRUE(std::filesystem::exists(m_testFilename)) << "File was not created";
         
         // Read data from file
-        std::optional<GameData> loadedData = DataReaderWriter::readData(testFilename);
+        std::optional<GameData> loadedData = DataReaderWriter::readData(m_testFilename);
         ASSERT_TRUE(loadedData.has_value()) << "Failed to read data from file";
         
         // Verify data
@@ -72,9 +72,9 @@ TEST_F(DataReaderWriterTest, WriteAndReadSpecialCharacters) {
         // Test with special characters in the nickname
         GameData gd("Test@Data#$%^&*", 300);
         
-        ASSERT_TRUE(DataReaderWriter::writeData(gd, testFilename));
+        ASSERT_TRUE(DataReaderWriter::writeData(gd, m_testFilename));
         
-        std::optional<GameData> loadedData = DataReaderWriter::readData(testFilename);
+        std::optional<GameData> loadedData = DataReaderWriter::readData(m_testFilename);
         ASSERT_TRUE(loadedData.has_value());
         
         ASSERT_EQ(loadedData.value().getNickName(), "Test@Data#$%^&*");
@@ -98,13 +98,13 @@ TEST_F(DataReaderWriterTest, WriteFailInvalidPath) {
 TEST_F(DataReaderWriterTest, ReadCorruptedFile) {
     // Create a corrupted file
     {
-        std::ofstream file(testFilename);
+        std::ofstream file(m_testFilename);
         file << "This is not valid encrypted data";
         file.close();
     }
     
     // Try to read it
-    std::optional<GameData> loadedData = DataReaderWriter::readData(testFilename);
+    std::optional<GameData> loadedData = DataReaderWriter::readData(m_testFilename);
     ASSERT_FALSE(loadedData.has_value()) << "Expected failure on corrupted file";
 }
 

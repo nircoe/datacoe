@@ -11,11 +11,11 @@ namespace DataManagement {
 class IntegrationTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        testFilename = "test_integration.json";
+        m_testFilename = "test_integration.json";
         // Clean up any leftover files
         try {
-            if (std::filesystem::exists(testFilename)) {
-                std::filesystem::remove(testFilename);
+            if (std::filesystem::exists(m_testFilename)) {
+                std::filesystem::remove(m_testFilename);
             }
         } catch (const std::filesystem::filesystem_error&) {
             // Ignore if file doesn't exist
@@ -29,8 +29,8 @@ protected:
         // Try to clean up the test file
         for (int i = 0; i < 5; i++) {
             try {
-                if (std::filesystem::exists(testFilename)) {
-                    std::filesystem::remove(testFilename);
+                if (std::filesystem::exists(m_testFilename)) {
+                    std::filesystem::remove(m_testFilename);
                 }
                 break;
             } catch (const std::filesystem::filesystem_error& e) {
@@ -40,7 +40,7 @@ protected:
         }
     }
 
-    std::string testFilename;
+    std::string m_testFilename;
 };
 
 TEST_F(IntegrationTest, FullLifecycle) {
@@ -49,11 +49,11 @@ TEST_F(IntegrationTest, FullLifecycle) {
         GameData originalData("IntegrationTest", 1000);
         
         // 2. Write directly with DataReaderWriter
-        ASSERT_TRUE(DataReaderWriter::writeData(originalData, testFilename));
+        ASSERT_TRUE(DataReaderWriter::writeData(originalData, m_testFilename));
         
         // 3. Load with DataManager
         DataManager dm;
-        dm.init(testFilename);
+        dm.init(m_testFilename);
         
         // 4. Verify data loaded correctly
         const GameData& loadedData = dm.getGameData();
@@ -65,7 +65,7 @@ TEST_F(IntegrationTest, FullLifecycle) {
         ASSERT_TRUE(dm.saveGame());
         
         // 6. Read directly with DataReaderWriter
-        std::optional<GameData> readData = DataReaderWriter::readData(testFilename);
+        std::optional<GameData> readData = DataReaderWriter::readData(m_testFilename);
         ASSERT_TRUE(readData.has_value());
         ASSERT_EQ(readData.value().getNickName(), "IntegrationTest");
         ASSERT_EQ(readData.value().getHighscore(), 2000);
@@ -78,14 +78,14 @@ TEST_F(IntegrationTest, MultipleInstances) {
     try {
         // Create and use multiple DataManager instances with the same file
         DataManager dm1;
-        dm1.init(testFilename);
+        dm1.init(m_testFilename);
         dm1.setNickName("Player1");
         dm1.setHighScore(100);
         ASSERT_TRUE(dm1.saveGame());
         
         // Create a second instance and load the data
         DataManager dm2;
-        dm2.init(testFilename);
+        dm2.init(m_testFilename);
         ASSERT_EQ(dm2.getGameData().getNickName(), "Player1");
         ASSERT_EQ(dm2.getGameData().getHighscore(), 100);
         
@@ -95,7 +95,7 @@ TEST_F(IntegrationTest, MultipleInstances) {
         
         // Create a third instance and check data
         DataManager dm3;
-        dm3.init(testFilename);
+        dm3.init(m_testFilename);
         ASSERT_EQ(dm3.getGameData().getNickName(), "Player1");
         ASSERT_EQ(dm3.getGameData().getHighscore(), 200);
         
@@ -114,21 +114,21 @@ TEST_F(IntegrationTest, DataCorruption) {
     try {
         // Setup initial valid data
         DataManager dm1;
-        dm1.init(testFilename);
+        dm1.init(m_testFilename);
         dm1.setNickName("ValidData");
         dm1.setHighScore(100);
         ASSERT_TRUE(dm1.saveGame());
         
         // Corrupt the file
         {
-            std::ofstream file(testFilename, std::ios::trunc);
+            std::ofstream file(m_testFilename, std::ios::trunc);
             file << "This is corrupted data that can't be decrypted";
             file.close();
         }
         
         // Try to load corrupted data
         DataManager dm2;
-        dm2.init(testFilename);
+        dm2.init(m_testFilename);
         
         // Should initialize with default empty values
         ASSERT_EQ(dm2.getGameData().getNickName(), "");
@@ -141,7 +141,7 @@ TEST_F(IntegrationTest, DataCorruption) {
         
         // Verify the new data was saved correctly
         DataManager dm3;
-        dm3.init(testFilename);
+        dm3.init(m_testFilename);
         ASSERT_EQ(dm3.getGameData().getNickName(), "RecoveredData");
         ASSERT_EQ(dm3.getGameData().getHighscore(), 300);
     } catch (const std::exception& e) {
@@ -153,7 +153,7 @@ TEST_F(IntegrationTest, ConcurrentAccess) {
     try {
         // Setup initial data
         GameData originalData("ConcurrentTest", 100);
-        ASSERT_TRUE(DataReaderWriter::writeData(originalData, testFilename));
+        ASSERT_TRUE(DataReaderWriter::writeData(originalData, m_testFilename));
         
         // Create multiple threads that read and write concurrently
         std::vector<std::thread> threads;
@@ -163,11 +163,11 @@ TEST_F(IntegrationTest, ConcurrentAccess) {
             threads.emplace_back([this, i, &successCount]() {
                 try {
                     // Read, modify, write
-                    std::optional<GameData> data = DataReaderWriter::readData(testFilename);
+                    std::optional<GameData> data = DataReaderWriter::readData(m_testFilename);
                     if (data.has_value()) {
                         GameData modified = data.value();
                         modified.setHighScore(modified.getHighscore() + 100);
-                        if (DataReaderWriter::writeData(modified, testFilename)) {
+                        if (DataReaderWriter::writeData(modified, m_testFilename)) {
                             successCount++;
                         }
                     }
@@ -186,7 +186,7 @@ TEST_F(IntegrationTest, ConcurrentAccess) {
         ASSERT_GT(successCount, 0);
         
         // Final data should have a higher score than the original
-        std::optional<GameData> finalData = DataReaderWriter::readData(testFilename);
+        std::optional<GameData> finalData = DataReaderWriter::readData(m_testFilename);
         ASSERT_TRUE(finalData.has_value());
         ASSERT_GT(finalData.value().getHighscore(), 100);
     } catch (const std::exception& e) {
