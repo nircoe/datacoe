@@ -32,15 +32,25 @@ protected:
     }
 
     void TearDown() override {
+        // Wait longer to ensure file handles are released
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        
         try {
-            if (std::filesystem::exists(m_testFilename)) {
-                std::filesystem::remove(m_testFilename);
+            for (int retries = 0; retries < 5; retries++) {
+                if (std::filesystem::exists(m_testFilename)) {
+                    std::error_code ec;
+                    std::filesystem::remove(m_testFilename, ec);
+                    if (!ec) break;
+                    
+                    std::cerr << "Failed to remove file on attempt " << retries 
+                              << ": " << ec.message() << std::endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                } else {
+                    break;
+                }
             }
-            if (std::filesystem::exists(m_corruptFilename)) {
-                std::filesystem::remove(m_corruptFilename);
-            }
-        } catch (const std::filesystem::filesystem_error&) {
-            // Ignore errors
+        } catch (const std::exception& e) {
+            std::cerr << "Exception during TearDown: " << e.what() << std::endl;
         }
     }
 

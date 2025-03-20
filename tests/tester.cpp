@@ -7,6 +7,7 @@
 #include <thread>
 #include <sstream>
 #include <iomanip>
+#include <signal.h>
 
 // ANSI color codes for terminal output
 namespace Color {
@@ -35,6 +36,10 @@ const char RUNNING_CHAR = 'R';
 const char PASSED_CHAR = 'P';
 const char FAILED_CHAR = 'F';
 const char EMPTY_CHAR = '\0';
+
+// Global variables for original stream buffers
+std::streambuf* g_origCoutBuf = nullptr;
+std::streambuf* g_origCerrBuf = nullptr;
 
 // Custom listener for displaying test progress as a grid
 class GridTestListener : public testing::TestEventListener {
@@ -66,6 +71,11 @@ public:
           m_totalTests(0), m_completedTests(0), m_passedTests(0), m_failedTests(0),
           m_origCoutBuf(std::cout.rdbuf()), m_origCerrBuf(std::cerr.rdbuf()) {
         m_startTime = std::chrono::high_resolution_clock::now();
+
+        // Save global copies for signal handler
+        g_origCoutBuf = m_origCoutBuf;
+        g_origCerrBuf = m_origCerrBuf;
+
     }
 
     ~GridTestListener() override { 
@@ -301,8 +311,41 @@ private:
     }
 };
 
+void signalHandler(int signal) {
+    if(g_origCoutBuf) std::cout.rdbuf(g_origCoutBuf); // Restore original cout buffer
+    if(g_origCoutBuf) std::cerr.rdbuf(g_origCerrBuf); // Restore original cerr buffer
+    
+    std::cerr << "Test crashed with signal " << signal;
+    if (signal == SIGSEGV) std::cerr << " (SIGSEGV: Segmentation fault)";
+    if (signal == SIGABRT) std::cerr << " (SIGABRT: Abort)";
+    std::cerr << std::endl;
+    exit(128 + signal);
+}
+
+bool isRunningInCI() {
+    // Common environment variables set by CI systems
+    return (getenv("CI") != nullptr || 
+            getenv("GITHUB_ACTIONS") != nullptr ||
+            getenv("TRAVIS") != nullptr ||
+            getenv("JENKINS_URL") != nullptr);
+}
+
 int main(int argc, char **argv) {
+    // Register signal handlers
+    signal(SIGSEGV, signalHandler);
+    signal(SIGABRT, signalHandler);
+
     ::testing::InitGoogleTest(&argc, argv);
+
+    // if (isRunningInCI()) {
+    //     // Skip problematic tests in CI
+    //     ::testing::GTEST_FLAG(filter) = 
+    //         "-MemoryTest.MultipleInstancesWithSameFile:"
+    //         "ThreadSafetyTest.*:"
+    //         "ErrorHandlingTest.*";
+        
+    //     std::cout << "Running in CI environment. Some tests will be skipped." << std::endl;
+    // }
     
     // Remove the default listener
     auto& listeners = ::testing::UnitTest::GetInstance()->listeners();

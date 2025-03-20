@@ -87,7 +87,7 @@ jobs:
     - name: Run tests
       working-directory: build
       run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
+        if [ "$RUNNER_OS" == "Windows" ] && [ "${{ matrix.compiler }}" == "msvc" ]; then
           ./tests/Release/all_tests
         else
           ./tests/all_tests

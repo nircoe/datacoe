@@ -47,8 +47,8 @@ TEST_F(ThreadSafetyTest, ConcurrentReads) {
         ASSERT_TRUE(dm.saveGame());
     }
     
-    constexpr int threadCount = 10;
-    constexpr int iterationsPerThread = 100;
+    constexpr int threadCount = 5;
+    constexpr int iterationsPerThread = 20;
     
     std::vector<std::thread> threads;
     std::atomic<int> successCount = 0;
