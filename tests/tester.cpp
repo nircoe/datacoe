@@ -40,7 +40,6 @@ const char EMPTY_CHAR = '\0';
 class GridTestListener : public testing::TestEventListener {
 private:
     testing::TestEventListener* m_originalListener;
-    bool m_showPassedTests;
     
     // Data for tracking test progress
     std::map<std::string, std::vector<TestStatus>> m_suiteTestStatus;
@@ -62,8 +61,8 @@ private:
     std::stringstream m_nullStream;
 
 public:
-    GridTestListener(testing::TestEventListener* listener, bool showPassed)
-        : m_originalListener(listener), m_showPassedTests(showPassed),
+    GridTestListener(testing::TestEventListener* listener)
+        : m_originalListener(listener),
           m_totalTests(0), m_completedTests(0), m_passedTests(0), m_failedTests(0),
           m_origCoutBuf(std::cout.rdbuf()), m_origCerrBuf(std::cerr.rdbuf()) {
         m_startTime = std::chrono::high_resolution_clock::now();
@@ -310,7 +309,7 @@ int main(int argc, char **argv) {
     auto defaultListener = listeners.Release(listeners.default_result_printer());
     
     // Add our custom listener
-    listeners.Append(new GridTestListener(defaultListener, false));
+    listeners.Append(new GridTestListener(defaultListener));
     
     return RUN_ALL_TESTS();
 }

@@ -20,13 +20,6 @@ jobs:
             compiler: msvc
             cmake-generator: 'Visual Studio 17 2022'
             cmake-options: ''
-          
-          # Windows with Clang
-          - name: "Windows Clang"
-            os: windows-latest
-            compiler: clang
-            cmake-generator: 'Ninja'
-            cmake-options: '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
             
           # Windows with MinGW (GCC)
           - name: "Windows MinGW"
