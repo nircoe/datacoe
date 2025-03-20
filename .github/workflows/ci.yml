@@ -1,0 +1,111 @@
+name: Data Management Build and Test
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master, dev ]
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows with MSVC
+          - name: "Windows MSVC"
+            os: windows-latest
+            compiler: msvc
+            cmake-generator: 'Visual Studio 17 2022'
+            cmake-options: ''
+          
+          # Windows with Clang
+          - name: "Windows Clang"
+            os: windows-latest
+            compiler: clang
+            cmake-generator: 'Ninja'
+            cmake-options: '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
+            
+          # Windows with MinGW (GCC)
+          - name: "Windows MinGW"
+            os: windows-latest
+            compiler: gcc
+            cmake-generator: 'MinGW Makefiles'
+            cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
+          
+          # Linux with GCC
+          - name: "Linux GCC"
+            os: ubuntu-latest
+            compiler: gcc
+            cmake-generator: 'Ninja'
+            cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
+          
+          # Linux with Clang
+          - name: "Linux Clang"
+            os: ubuntu-latest
+            compiler: clang
+            cmake-generator: 'Ninja'
+            cmake-options: '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
+          
+          # macOS with Apple Clang
+          - name: "macOS Clang"
+            os: macos-latest
+            compiler: clang
+            cmake-generator: 'Ninja'
+            cmake-options: ''
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+
+    - name: Install ninja-build (non-Windows)
+      if: matrix.os != 'windows-latest'
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          brew install ninja
+        fi
+      shell: bash
+
+    - name: Install Windows build tools
+      if: matrix.os == 'windows-latest' && matrix.compiler != 'msvc'
+      run: |
+        if [ "${{ matrix.compiler }}" == "clang" ]; then
+          choco install ninja
+        elif [ "${{ matrix.compiler }}" == "gcc" ]; then
+          choco install mingw
+        fi
+      shell: bash
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -G "${{ matrix.cmake-generator }}" ${{ matrix.cmake-options }}
+
+    - name: Build
+      run: |
+        cmake --build build --config Release
+
+    - name: Run tests
+      working-directory: build
+      run: |
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          ./tests/Release/all_tests
+        else
+          ./tests/all_tests
+        fi
+      shell: bash
+
+  # Job to ensure all required checks pass before merging
+  required-checks:
+    name: All Checks Passed
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: All checks passed
+        run: echo "All required checks have passed!"

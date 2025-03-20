@@ -10,7 +10,7 @@ This repository contains a generic C++ data management library designed for game
 - [API Overview and Examples](#api-overview-and-examples)
 - [Dependencies](#dependencies)
 - [Testing](#testing)
-- [Platform Compatibility](#platform-compatibility)
+- [Continuous Integration](#continuous-integration)
 - [Repository Organization](#repository-organization)
 - [Version History](#version-history)
 - [Contributing](#contributing)
@@ -335,14 +335,37 @@ If you don't need the tests in your project, you can disable them by:
 
 [Back to top](#table-of-contents)
 
-## Platform Compatibility
+## Continuous Integration
 
-This library is designed to be cross-platform and has been tested on:
-- Windows
-- Linux (should work, platform-specific code is included)
-- macOS (should work, platform-specific code is included)
+This project uses GitHub Actions for continuous integration to ensure code quality and compatibility across different platforms and compilers.
 
-The core functionality uses standard C++17 features for maximum compatibility. Platform-specific code (such as file permissions handling) is wrapped in conditional compilation blocks to ensure proper behavior across different operating systems.
+### CI Pipeline Status
+
+[![Data Management Build and Test](https://github.com/nircoe/data-management/actions/workflows/ci.yml/badge.svg)](https://github.com/nircoe/data-management/actions/workflows/ci.yml)
+
+### Supported Platforms and Compilers
+
+Our CI pipeline automatically builds and tests the project with the following configurations:
+
+- **Windows**:
+  - Visual Studio (MSVC)
+  - Clang
+  - GCC (MinGW)
+  
+- **Linux**:
+  - GCC
+  - Clang
+  
+- **macOS**:
+  - Apple Clang
+
+Each configuration compiles the project and runs the full test suite to verify compatibility and functionality. All supported platforms use C++17 features for maximum portability.
+
+Platform-specific code (such as file permissions handling) is wrapped in conditional compilation blocks to ensure proper behavior across different operating systems.
+
+### For [Contributors](#contributing)
+
+Pull requests will automatically trigger the CI pipeline. All checks must pass before a PR can be merged to ensure the codebase remains stable. If you encounter CI failures in your PR, please check the build logs for details on what went wrong.
 
 [Back to top](#table-of-contents)
 
