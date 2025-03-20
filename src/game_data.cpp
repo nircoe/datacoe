@@ -6,25 +6,13 @@ namespace DataManagement
 {
     GameData::GameData(const std::string &nickname, const int highscore) : m_nickname(nickname), m_highscore(highscore) { }
 
-    void GameData::setNickName(const std::string &nickname)
-    {
-        m_nickname = nickname;
-    }
+    void GameData::setNickName(const std::string &nickname) { m_nickname = nickname; }
 
-    void GameData::setHighScore(int highscore)
-    {
-        m_highscore = highscore;
-    }
+    void GameData::setHighScore(int highscore) { m_highscore = highscore; }
 
-    const std::string &GameData::getNickName() const
-    {
-        return m_nickname;
-    }
+    const std::string &GameData::getNickName() const { return m_nickname; }
 
-    const int GameData::getHighscore() const
-    {
-        return m_highscore;
-    }
+    int GameData::getHighscore() const { return m_highscore; }
 
     json GameData::toJson() const
     {
@@ -54,6 +42,6 @@ namespace DataManagement
         else
             throw std::runtime_error("'highscore' key is missing or invalid in the JSON object we are trying to load.");
 
-        return std::move(GameData(nickname, highscore));
+        return GameData(nickname, highscore);
     }
 } // namespace DataManagement

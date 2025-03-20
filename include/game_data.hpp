@@ -22,7 +22,7 @@ namespace DataManagement
         void setHighScore(int highscore);
 
         const std::string& getNickName() const;
-        const int getHighscore() const;
+        int getHighscore() const;
 
         json toJson() const;
 
