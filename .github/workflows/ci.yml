@@ -87,11 +87,7 @@ jobs:
     - name: Run tests
       working-directory: build
       run: |
-        if [ "${{ matrix.os }}" == "windows-latest" ] && [ "${{ matrix.compiler }}" == "msvc" ]; then
-          ./tests/Release/all_tests
-        else
-          ./tests/all_tests
-        fi
+        ./tests/all_tests
       shell: bash
 
   # Job to ensure all required checks pass before merging

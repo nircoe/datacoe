@@ -25,7 +25,19 @@ add_executable(all_tests
     ${TEST_FILES}
 )
 
-set_target_properties(all_tests PROPERTIES CXX_STANDARD 17)
+if(MSVC)
+    add_custom_command(TARGET all_tests POST_BUILD
+        # Move the executable
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/all_tests${CMAKE_EXECUTABLE_SUFFIX}"
+        "${CMAKE_CURRENT_BINARY_DIR}/all_tests${CMAKE_EXECUTABLE_SUFFIX}"
+        COMMENT "Copying all_tests executable from $<CONFIG> to tests directory")
+endif()
+
+set_target_properties(all_tests PROPERTIES 
+    CXX_STANDARD 17
+)
+
 target_include_directories(all_tests PRIVATE 
     ${GTEST_INCLUDE_DIR}
     ${GMOCK_INCLUDE_DIR}
