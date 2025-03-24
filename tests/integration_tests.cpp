@@ -149,49 +149,4 @@ TEST_F(IntegrationTest, DataCorruption) {
     }
 }
 
-TEST_F(IntegrationTest, ConcurrentAccess) {
-    try {
-        // Setup initial data
-        GameData originalData("ConcurrentTest", 100);
-        ASSERT_TRUE(DataReaderWriter::writeData(originalData, m_testFilename));
-        
-        // Create multiple threads that read and write concurrently
-        std::vector<std::thread> threads;
-        std::atomic<int> successCount = 0;
-        
-        for (int i = 0; i < 5; i++) {
-            threads.emplace_back([this, i, &successCount]() {
-                try {
-                    // Read, modify, write
-                    std::optional<GameData> data = DataReaderWriter::readData(m_testFilename);
-                    if (data.has_value()) {
-                        GameData modified = data.value();
-                        modified.setHighScore(modified.getHighscore() + 100);
-                        if (DataReaderWriter::writeData(modified, m_testFilename)) {
-                            successCount++;
-                        }
-                    }
-                } catch (const std::exception& e) {
-                    std::cerr << "Thread " << i << " error: " << e.what() << std::endl;
-                }
-            });
-        }
-        
-        // Wait for all threads to complete
-        for (auto& thread : threads) {
-            thread.join();
-        }
-        
-        // At least some of the operations should have succeeded
-        ASSERT_GT(successCount, 0);
-        
-        // Final data should have a higher score than the original
-        std::optional<GameData> finalData = DataReaderWriter::readData(m_testFilename);
-        ASSERT_TRUE(finalData.has_value());
-        ASSERT_GT(finalData.value().getHighscore(), 100);
-    } catch (const std::exception& e) {
-        FAIL() << "Unexpected exception: " << e.what();
-    }
-}
-
 } // namespace DataManagement

@@ -2,6 +2,10 @@
 
 This repository contains a generic C++ data management library designed for game projects. It provides functionalities for data persistence, serialization, and deserialization.
 
+![Windows](https://github.com/nircoe/data-management/actions/workflows/ci.yml/badge.svg?branch=main&event=push&label=Windows)
+![Linux](https://github.com/nircoe/data-management/actions/workflows/ci.yml/badge.svg?branch=main&event=push&label=Linux)
+![macOS](https://github.com/nircoe/data-management/actions/workflows/ci.yml/badge.svg?branch=main&event=push&label=macOS)
+
 ## Table of Contents
 - [Overview](#overview)
 - [Features](#features)
@@ -445,6 +449,7 @@ If you'd like to contribute, please:
 
 ### Planned Improvements
 - ⏳ Optional encryption (ability to disable encryption if not needed)
+- ⏳ Secure encryption key management (replacing fixed keys with secure storage and derivation)
 - ⏳ Graceful recovery from corrupted files with backup system
 - ⏳ Thread-safe operations for concurrent data access
 - ⏳ Asynchronous save/load operations
