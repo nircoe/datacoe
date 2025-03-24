@@ -87,12 +87,36 @@ jobs:
     - name: Run tests
       working-directory: build
       run: |
-        if [ "${{ matrix.os }}" == "windows-latest" ] && [ "${{matrix.compiler}}" == "msvc" ]; then
-            ./tests/Release/all_tests
-        elif [ "${{ matrix.os }}" == "windows-latest" ] && [ "${{matrix.compiler}}" == "gcc" ]; then
-            ./tests/all_tests.exe
+        # Debug: Show environment
+        echo "OS: ${{ matrix.os }}, Compiler: ${{ matrix.compiler }}"
+        echo "Current directory: $(pwd)"
+        
+        # List files to find the executable
+        echo "Directory structure:"
+        find . -type d | sort
+        
+        echo "Looking for all_tests executables:"
+        find . -name "all_tests*" -type f | sort
+        
+        if [ "${{ matrix.os }}" == "windows-latest" ] && [ "${{ matrix.compiler }}" == "gcc" ]; then
+          # Try to find the executable based on search results
+          TEST_EXE=$(find . -name "all_tests*.exe" -type f | head -1)
+          
+          if [ -n "$TEST_EXE" ]; then
+            echo "Found executable: $TEST_EXE"
+            echo "File info:"
+            ls -la "$TEST_EXE"
+            
+            # Try to run it with full path
+            "$TEST_EXE"
+          else
+            echo "ERROR: No test executable found!"
+            exit 1
+          fi
+        elif [ "${{ matrix.os }}" == "windows-latest" ] && [ "${{ matrix.compiler }}" == "msvc" ]; then
+          ./tests/Release/all_tests.exe
         else
-            ./tests/all_tests
+          ./tests/all_tests
         fi
       shell: bash
 
