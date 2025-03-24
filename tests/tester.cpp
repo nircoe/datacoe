@@ -322,30 +322,12 @@ void signalHandler(int signal) {
     exit(128 + signal);
 }
 
-bool isRunningInCI() {
-    // Common environment variables set by CI systems
-    return (getenv("CI") != nullptr || 
-            getenv("GITHUB_ACTIONS") != nullptr ||
-            getenv("TRAVIS") != nullptr ||
-            getenv("JENKINS_URL") != nullptr);
-}
-
 int main(int argc, char **argv) {
     // Register signal handlers
     signal(SIGSEGV, signalHandler);
     signal(SIGABRT, signalHandler);
 
     ::testing::InitGoogleTest(&argc, argv);
-
-    // if (isRunningInCI()) {
-    //     // Skip problematic tests in CI
-    //     ::testing::GTEST_FLAG(filter) = 
-    //         "-MemoryTest.MultipleInstancesWithSameFile:"
-    //         "ThreadSafetyTest.*:"
-    //         "ErrorHandlingTest.*";
-        
-    //     std::cout << "Running in CI environment. Some tests will be skipped." << std::endl;
-    // }
     
     // Remove the default listener
     auto& listeners = ::testing::UnitTest::GetInstance()->listeners();
