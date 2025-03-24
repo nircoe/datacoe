@@ -58,10 +58,10 @@ jobs:
     - name: Install ninja-build (non-Windows)
       if: matrix.os != 'windows-latest'
       run: |
-        if [ "$RUNNER_OS" == "Linux" ]; then
+        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
           sudo apt-get update
           sudo apt-get install -y ninja-build
-        elif [ "$RUNNER_OS" == "macOS" ]; then
+        elif [ "${{ matrix.os }}" == "macos-latest" ]; then
           brew install ninja
         fi
       shell: bash
@@ -87,7 +87,7 @@ jobs:
     - name: Run tests
       working-directory: build
       run: |
-        if [ "$RUNNER_OS" == "Windows" ] && [ "${{ matrix.compiler }}" == "msvc" ]; then
+        if [ "${{ matrix.os }}" == "windows-latest" ] && [ "${{ matrix.compiler }}" == "msvc" ]; then
           ./tests/Release/all_tests
         else
           ./tests/all_tests
