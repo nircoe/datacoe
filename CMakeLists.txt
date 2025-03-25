@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(data_management)
+project(datacoe)
 
 # Debug mode, feel free to modify to your desire
 set(CMAKE_BUILD_TYPE Debug)

@@ -6,26 +6,26 @@
 
 using json = nlohmann::json;
 
-namespace DataManagement
+namespace datacoe
 {
     // Users should modify this file to match their own game data
-    class GameData 
+    class GameData
     {
         // game data examples
         std::string m_nickname;
         int m_highscore;
 
     public:
-        GameData(const std::string& nickname = "", const int highscore = 0);
+        GameData(const std::string &nickname = "", const int highscore = 0);
 
-        void setNickName(const std::string& nickname);
+        void setNickName(const std::string &nickname);
         void setHighScore(int highscore);
 
-        const std::string& getNickName() const;
+        const std::string &getNickName() const;
         int getHighscore() const;
 
         json toJson() const;
 
-        static GameData fromJson(const json& j);    
+        static GameData fromJson(const json &j);
     };
-} // namespace DataManagement
+} // namespace datacoe

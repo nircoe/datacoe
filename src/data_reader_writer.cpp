@@ -12,13 +12,12 @@
 #include "cryptopp/osrng.h"
 #include "cryptopp/base64.h"
 
-namespace DataManagement
+namespace datacoe
 {
     // Fixed Encryption Key (Warning: This is Insecure, I'm using it for learning purposes only!)
     const CryptoPP::byte fixedKey[] = {
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
-    };
+        0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
 
     std::string DataReaderWriter::encrypt(const std::string &data)
     {
@@ -33,37 +32,35 @@ namespace DataManagement
             std::string ciphertext;
             CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encryption(fixedKey, CryptoPP::AES::DEFAULT_KEYLENGTH, iv);
             CryptoPP::StringSource ss1(data, true,
-                new CryptoPP::StreamTransformationFilter(encryption,
-                    new CryptoPP::StringSink(ciphertext)
-                )
-            );
+                                       new CryptoPP::StreamTransformationFilter(encryption,
+                                                                                new CryptoPP::StringSink(ciphertext)));
 
             // Combine IV and ciphertext
-            std::string ivString(reinterpret_cast<const char*>(iv), CryptoPP::AES::BLOCKSIZE);
+            std::string ivString(reinterpret_cast<const char *>(iv), CryptoPP::AES::BLOCKSIZE);
             std::string combinedData = ivString + ciphertext;
 
             // Base64 encode the combined data
             std::string encoded;
             CryptoPP::StringSource ss2(combinedData, true,
-                new CryptoPP::Base64Encoder(
-                    new CryptoPP::StringSink(encoded)
-                )
-            );
+                                       new CryptoPP::Base64Encoder(
+                                           new CryptoPP::StringSink(encoded)));
 
             return encoded;
         }
-        catch(const CryptoPP::Exception& e)
+        catch (const CryptoPP::Exception &e)
         {
-            std::cerr << "DataReaderWriter::encrypt() Crypto Error: " << std::endl << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::encrypt() Crypto Error: " << std::endl
+                      << e.what() << std::endl;
             return "";
         }
-        catch(const std::exception& e)
+        catch (const std::exception &e)
         {
-            std::cerr << "DataReaderWriter::encrypt() General Error: " << std::endl << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::encrypt() General Error: " << std::endl
+                      << e.what() << std::endl;
             return "";
         }
     }
-    
+
     std::string DataReaderWriter::decrypt(const std::string &encodedData)
     {
         try
@@ -71,13 +68,11 @@ namespace DataManagement
             // Decode Base64
             std::string decoded;
             CryptoPP::StringSource ss1(encodedData, true,
-                new CryptoPP::Base64Decoder(
-                    new CryptoPP::StringSink(decoded)
-                )
-            );
+                                       new CryptoPP::Base64Decoder(
+                                           new CryptoPP::StringSink(decoded)));
 
             // Check if decoded data has enough length for IV and ciphertext
-            if(decoded.length() <= CryptoPP::AES::BLOCKSIZE)
+            if (decoded.length() <= CryptoPP::AES::BLOCKSIZE)
             {
                 std::cerr << "DataReaderWriter::decrypt() Error: Decoded data too short" << std::endl;
                 return "";
@@ -92,21 +87,21 @@ namespace DataManagement
             std::string plaintext;
             CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decryption(fixedKey, CryptoPP::AES::DEFAULT_KEYLENGTH, iv);
             CryptoPP::StringSource ss2(ciphertext, true,
-                new CryptoPP::StreamTransformationFilter(decryption,
-                    new CryptoPP::StringSink(plaintext)
-                )
-            );
+                                       new CryptoPP::StreamTransformationFilter(decryption,
+                                                                                new CryptoPP::StringSink(plaintext)));
 
             return plaintext;
         }
-        catch(const CryptoPP::Exception& e)
+        catch (const CryptoPP::Exception &e)
         {
-            std::cerr << "DataReaderWriter::decrypt() Crypto Error: " << std::endl << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::decrypt() Crypto Error: " << std::endl
+                      << e.what() << std::endl;
             return "";
         }
-        catch(const std::exception& e)
+        catch (const std::exception &e)
         {
-            std::cerr << "DataReaderWriter::decrypt() General Error: " << std::endl << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::decrypt() General Error: " << std::endl
+                      << e.what() << std::endl;
             return "";
         }
     }
@@ -117,11 +112,12 @@ namespace DataManagement
         {
             // Convert GameData to JSON
             std::string jsonData = gamedata.toJson().dump();
-            std::cout << "Debug: GameData to JSON: " << std::endl << jsonData << std::endl;
+            std::cout << "Debug: GameData to JSON: " << std::endl
+                      << jsonData << std::endl;
 
             // Encrypt the JSON data
             std::string encryptedData = encrypt(jsonData);
-            if(encryptedData.empty())
+            if (encryptedData.empty())
             {
                 std::cerr << "DataReaderWriter::writeData() Error: Encryption failed" << std::endl;
                 return false;
@@ -129,14 +125,14 @@ namespace DataManagement
 
             // Write the encrypted data to file
             std::ofstream file(filename, std::ios::binary);
-            if(!file.is_open())
+            if (!file.is_open())
             {
                 std::cerr << "DataReaderWriter::writeData() Error: Could not open file for writing: " << filename << std::endl;
                 return false;
             }
 
             file.write(encryptedData.c_str(), encryptedData.size());
-            if(!file.good())
+            if (!file.good())
             {
                 std::cerr << "DataReaderWriter::writeData() Error: File write failed" << std::endl;
                 file.close();
@@ -146,9 +142,10 @@ namespace DataManagement
             file.close();
             return true;
         }
-        catch(const std::exception& e)
+        catch (const std::exception &e)
         {
-            std::cerr << "DataReaderWriter::writeData() Error: " << std::endl << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::writeData() Error: " << std::endl
+                      << e.what() << std::endl;
             return false;
         }
     }
@@ -157,7 +154,7 @@ namespace DataManagement
     {
         try
         {
-            if(!std::filesystem::exists(filename))
+            if (!std::filesystem::exists(filename))
             {
                 std::cerr << "DataReaderWriter::readData() Error: File does not exist: " << filename << std::endl;
                 return std::nullopt;
@@ -165,7 +162,7 @@ namespace DataManagement
 
             // Read the encrypted data from file
             std::ifstream file(filename, std::ios::binary);
-            if(!file.is_open())
+            if (!file.is_open())
             {
                 std::cerr << "DataReaderWriter::readData() Error: Could not open file for reading: " << filename << std::endl;
                 return std::nullopt;
@@ -176,27 +173,30 @@ namespace DataManagement
 
             // Decrypt the data
             std::string decryptedData = decrypt(encodedData);
-            if(decryptedData.empty())
+            if (decryptedData.empty())
             {
                 std::cerr << "DataReaderWriter::readData() Error: Decryption failed" << std::endl;
                 return std::nullopt;
             }
 
-            std::cout << "Debug: Decrypted JSON: " << std::endl << decryptedData << std::endl;
+            std::cout << "Debug: Decrypted JSON: " << std::endl
+                      << decryptedData << std::endl;
 
             // Parse the JSON data
             json j = json::parse(decryptedData);
             return GameData::fromJson(j);
         }
-        catch(const json::exception& e)
+        catch (const json::exception &e)
         {
-            std::cerr << "DataReaderWriter::readData() JSON Error: " << std::endl << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::readData() JSON Error: " << std::endl
+                      << e.what() << std::endl;
             return std::nullopt;
         }
-        catch(const std::exception& e)
+        catch (const std::exception &e)
         {
-            std::cerr << "DataReaderWriter::readData() Error: " << std::endl << e.what() << std::endl;
+            std::cerr << "DataReaderWriter::readData() Error: " << std::endl
+                      << e.what() << std::endl;
             return std::nullopt;
         }
     }
-} // namespace DataManagement
+} // namespace datacoe

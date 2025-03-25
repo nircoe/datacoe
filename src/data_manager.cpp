@@ -1,10 +1,10 @@
 #include "data_manager.hpp"
 
-namespace DataManagement
+namespace datacoe
 {
     bool DataManager::saveGame()
     {
-        if(m_gamedata.getNickName().empty())
+        if (m_gamedata.getNickName().empty())
             return true; // no need to save (guest mode)
 
         return DataReaderWriter::writeData(m_gamedata, m_filename);
@@ -14,7 +14,7 @@ namespace DataManagement
     {
         std::optional<GameData> loadedGameData = DataReaderWriter::readData(m_filename);
         bool readDataSucceed = loadedGameData.has_value();
-        if(readDataSucceed)
+        if (readDataSucceed)
             m_gamedata = loadedGameData.value();
         return readDataSucceed;
     }
@@ -22,7 +22,7 @@ namespace DataManagement
     void DataManager::init(const std::string filename)
     {
         m_filename = filename;
-        if(!loadGame())
+        if (!loadGame())
         {
             // can't load, needs to ask the user for a nickname and create new GameData
             newGame();
@@ -44,8 +44,8 @@ namespace DataManagement
         m_gamedata.setHighScore(highscore);
     }
 
-    const GameData& DataManager::getGameData() const
+    const GameData &DataManager::getGameData() const
     {
         return m_gamedata;
     }
-} // namespace DataManagement
+} // namespace datacoe

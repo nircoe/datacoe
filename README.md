@@ -1,10 +1,10 @@
-# data-management
+# datacoe
 
-This repository contains a generic C++ data management library designed for game projects. It provides functionalities for data persistence, serialization, and deserialization.
+datacoe is a generic C++ data management library designed for game projects. It provides functionalities for data persistence, serialization, and deserialization.
 
-[![Windows](https://github.com/nircoe/data-management/actions/workflows/ci-windows.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/data-management/actions/workflows/ci-windows.yml)
-[![Linux](https://github.com/nircoe/data-management/actions/workflows/ci-linux.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/data-management/actions/workflows/ci-linux.yml)
-[![macOS](https://github.com/nircoe/data-management/actions/workflows/ci-macos.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/data-management/actions/workflows/ci-macos.yml)
+[![Windows](https://github.com/nircoe/datacoe/actions/workflows/ci-windows.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-windows.yml)
+[![Linux](https://github.com/nircoe/datacoe/actions/workflows/ci-linux.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-linux.yml)
+[![macOS](https://github.com/nircoe/datacoe/actions/workflows/ci-macos.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-macos.yml)
 
 ## Table of Contents
 - [Overview](#overview)
@@ -89,8 +89,8 @@ The library follows a layered architecture:
 
 ```bash
 # Clone the repository with submodules
-git clone --recurse-submodules https://github.com/yourusername/data-management.git
-cd data-management
+git clone --recurse-submodules https://github.com/yourusername/datacoe.git
+cd datacoe
 
 # Create a build directory
 mkdir build && cd build
@@ -121,12 +121,12 @@ cmake --build .
 
    Add the library to your project's CMakeLists.txt:
    ```cmake
-   add_subdirectory(path/to/data-management)
+   add_subdirectory(path/to/datacoe)
    ```
    
    Then link your executable with the library:
    ```cmake
-   target_link_libraries(your_game_executable PRIVATE data_management)
+   target_link_libraries(your_game_executable PRIVATE datacoe)
    ```
 
 [Back to top](#table-of-contents)
@@ -149,7 +149,7 @@ The library consists of three main components:
 #include "data_manager.hpp"
 
 // Initialize with a file path
-DataManagement::DataManager manager;
+datacoe::DataManager manager;
 manager.init("save_game.json");
 
 // Set game data
@@ -166,14 +166,14 @@ bool saveSuccess = manager.saveGame();
 #include "data_manager.hpp"
 
 // Initialize with the same file path
-DataManagement::DataManager manager;
+datacoe::DataManager manager;
 manager.init("save_game.json");
 
 // Load from disk (this happens automatically on init, but can be called explicitly)
 manager.loadGame();
 
 // Access game data
-const DataManagement::GameData& data = manager.getGameData();
+const datacoe::GameData& data = manager.getGameData();
 std::string playerName = data.getNickName();
 int score = data.getHighscore();
 ```
@@ -183,7 +183,7 @@ int score = data.getHighscore();
 ```cpp
 #include "data_manager.hpp"
 
-DataManagement::DataManager manager;
+datacoe::DataManager manager;
 manager.init("save_game.json");
 
 // Reset to default values
@@ -345,7 +345,9 @@ This project uses GitHub Actions for continuous integration to ensure code quali
 
 ### CI Pipeline Status
 
-[![Data Management Build and Test](https://github.com/nircoe/data-management/actions/workflows/ci.yml/badge.svg)](https://github.com/nircoe/data-management/actions/workflows/ci.yml)
+[![Windows](https://github.com/nircoe/datacoe/actions/workflows/ci-windows.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-windows.yml)
+[![Linux](https://github.com/nircoe/datacoe/actions/workflows/ci-linux.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-linux.yml)
+[![macOS](https://github.com/nircoe/datacoe/actions/workflows/ci-macos.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-macos.yml)
 
 ### Supported Platforms and Compilers
 
@@ -379,7 +381,7 @@ Pull requests will automatically trigger the CI pipeline. All checks must pass b
 
 The main repository contains several game-specific branches that demonstrate how this library has been customized for different games:
 
-- `game/worm`: Contains the data management implementation for the "Worm" game
+- `game/worm`: Contains the data management implementation for my game "Worm"
 - `game/future-game`: Example of another game-specific branch
 
 Note: While I use this branching strategy for my own projects, if you fork the repository, you may simply customize the main branch for your specific game.
@@ -394,7 +396,7 @@ Users should select their desired version of the template by checking out the ap
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/data-management.git
+git clone https://github.com/yourusername/datacoe.git
 
 # List available tags
 git tag -l

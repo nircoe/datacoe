@@ -37,7 +37,7 @@ target_include_directories(all_tests PRIVATE
 )
 
 target_link_libraries(all_tests PRIVATE 
-    data_management 
+    datacoe 
     gtest
     gmock
 )
@@ -84,7 +84,7 @@ if(BUILD_INDIVIDUAL_TESTS)
         
         # Link libraries
         target_link_libraries(${test_name} PRIVATE 
-            data_management 
+            datacoe 
             gtest_main 
             gmock_main
         )

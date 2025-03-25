@@ -5,7 +5,7 @@
 #include "game_data.hpp"
 #include "data_reader_writer.hpp"
 
-namespace DataManagement
+namespace datacoe
 {
     class DataManager
     {
@@ -31,6 +31,6 @@ namespace DataManagement
         void setNickName(std::string nickname);
         void setHighScore(int highscore);
 
-        const GameData& getGameData() const;
+        const GameData &getGameData() const;
     };
-} // namespace DataManagement 
+} // namespace datacoe
