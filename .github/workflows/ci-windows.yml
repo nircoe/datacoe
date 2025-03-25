@@ -1,4 +1,4 @@
-name: Data Management Build and Test
+name: Windows
 
 on:
   push:
@@ -9,45 +9,22 @@ on:
 jobs:
   build-and-test:
     name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           # Windows with MSVC
           - name: "Windows MSVC"
-            os: windows-latest
             compiler: msvc
             cmake-generator: 'Visual Studio 17 2022'
             cmake-options: ''
             
           # Windows with MinGW (GCC)
           - name: "Windows MinGW"
-            os: windows-latest
             compiler: gcc
             cmake-generator: 'MinGW Makefiles'
             cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
-          
-          # Linux with GCC
-          - name: "Linux GCC"
-            os: ubuntu-latest
-            compiler: gcc
-            cmake-generator: 'Ninja'
-            cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
-          
-          # Linux with Clang
-          - name: "Linux Clang"
-            os: ubuntu-latest
-            compiler: clang
-            cmake-generator: 'Ninja'
-            cmake-options: '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
-          
-          # macOS with Apple Clang
-          - name: "macOS Clang"
-            os: macos-latest
-            compiler: clang
-            cmake-generator: 'Ninja'
-            cmake-options: ''
 
     steps:
     - name: Checkout repository
@@ -55,19 +32,8 @@ jobs:
       with:
         submodules: 'recursive'
 
-    - name: Install ninja-build (non-Windows)
-      if: matrix.os != 'windows-latest'
-      run: |
-        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-          sudo apt-get update
-          sudo apt-get install -y ninja-build
-        elif [ "${{ matrix.os }}" == "macos-latest" ]; then
-          brew install ninja
-        fi
-      shell: bash
-
     - name: Install Windows build tools
-      if: matrix.os == 'windows-latest' && matrix.compiler != 'msvc'
+      if: matrix.compiler != 'msvc'
       run: |
         if [ "${{ matrix.compiler }}" == "clang" ]; then
           choco install ninja
@@ -87,8 +53,7 @@ jobs:
     - name: Run tests
       working-directory: build
       run: |
-        if [ "${{ matrix.os }}" == "windows-latest" ]; then
-          if [ "${{ matrix.compiler }}" == "gcc" ]; then
+        if [ "${{ matrix.compiler }}" == "gcc" ]; then
             # For MinGW - copy DLLs directly (no PATH manipulation)
             GCC_DIR=$(dirname $(which gcc))
             echo "GCC directory: $GCC_DIR"
@@ -99,21 +64,8 @@ jobs:
             echo "Running tests"
             cd tests
             ./all_tests.exe
-          else # MSVC
+        else # MSVC
             echo "Running tests"
             ./tests/Release/all_tests.exe
-          fi
-        else
-          echo "Running tests"
-          ./tests/all_tests
         fi
       shell: bash
-
-  # Job to ensure all required checks pass before merging
-  required-checks:
-    name: All Checks Passed
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: All checks passed
-        run: echo "All required checks have passed!"
