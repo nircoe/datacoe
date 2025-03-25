@@ -1,6 +1,7 @@
 # datacoe
 
-datacoe is a generic C++ data management library designed for game projects. It provides functionalities for data persistence, serialization, and deserialization.
+datacoe is a small, simple and generic C++ data management library for game development,
+It provides functionalities for data persistence, serialization, and encryption.
 
 [![Windows](https://github.com/nircoe/datacoe/actions/workflows/ci-windows.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-windows.yml)
 [![Linux](https://github.com/nircoe/datacoe/actions/workflows/ci-linux.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-linux.yml)
@@ -355,7 +356,6 @@ Our CI pipeline automatically builds and tests the project with the following co
 
 - **Windows**:
   - Visual Studio (MSVC)
-  - Clang
   - GCC (MinGW)
   
 - **Linux**:
