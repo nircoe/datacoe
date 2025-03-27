@@ -1,4 +1,4 @@
-#include "data_reader_writer.hpp"
+#include "datacoe/data_reader_writer.hpp"
 #include <memory>
 #include <fstream>
 #include <iostream>
@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <thread>
 #include <chrono>
+#include <vector>
 #include "cryptopp/aes.h"
 #include "cryptopp/modes.h"
 #include "cryptopp/filters.h"
@@ -14,10 +15,33 @@
 
 namespace datacoe
 {
+    const std::string ENCRYPTION_PREFIX = "DATACOE_ENCRYPTED";
+
     // Fixed Encryption Key (Warning: This is Insecure, I'm using it for learning purposes only!)
     const CryptoPP::byte fixedKey[] = {
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
         0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
+
+    bool DataReaderWriter::isFileEncrypted(const std::string &filename)
+    {
+        if (!std::filesystem::exists(filename))
+            return false;
+
+        std::ifstream file(filename, std::ios::binary);
+        if (!file.is_open())
+            return false;
+
+        // Read just enough bytes to check for our prefix
+        std::vector<char> header(ENCRYPTION_PREFIX.size());
+        file.read(header.data(), ENCRYPTION_PREFIX.size());
+
+        // Check if we read enough bytes
+        if (file.gcount() < static_cast<std::streamsize>(ENCRYPTION_PREFIX.size()))
+            return false;
+
+        // Compare with our prefix
+        return std::string(header.data(), static_cast<size_t>(file.gcount())) == ENCRYPTION_PREFIX;
+    }
 
     std::string DataReaderWriter::encrypt(const std::string &data)
     {
@@ -45,7 +69,7 @@ namespace datacoe
                                        new CryptoPP::Base64Encoder(
                                            new CryptoPP::StringSink(encoded)));
 
-            return encoded;
+            return ENCRYPTION_PREFIX + encoded;
         }
         catch (const CryptoPP::Exception &e)
         {
@@ -65,9 +89,20 @@ namespace datacoe
     {
         try
         {
+            std::string dataToDecrypt = encodedData;
+            if (dataToDecrypt.substr(0, ENCRYPTION_PREFIX.size()) == ENCRYPTION_PREFIX)
+            {
+                dataToDecrypt = dataToDecrypt.substr(ENCRYPTION_PREFIX.size());
+            }
+            else
+            {
+                std::cerr << "DataReaderWriter::decrypt() Warning: Missing encryption prefix" << std::endl;
+                // Continue anyway in case it's an older file without the prefix
+            }
+
             // Decode Base64
             std::string decoded;
-            CryptoPP::StringSource ss1(encodedData, true,
+            CryptoPP::StringSource ss1(dataToDecrypt, true,
                                        new CryptoPP::Base64Decoder(
                                            new CryptoPP::StringSink(decoded)));
 
@@ -106,7 +141,7 @@ namespace datacoe
         }
     }
 
-    bool DataReaderWriter::writeData(const GameData &gamedata, const std::string &filename)
+    bool DataReaderWriter::writeData(const GameData &gamedata, const std::string &filename, bool encryption)
     {
         try
         {
@@ -115,23 +150,32 @@ namespace datacoe
             std::cout << "Debug: GameData to JSON: " << std::endl
                       << jsonData << std::endl;
 
-            // Encrypt the JSON data
-            std::string encryptedData = encrypt(jsonData);
-            if (encryptedData.empty())
-            {
-                std::cerr << "DataReaderWriter::writeData() Error: Encryption failed" << std::endl;
-                return false;
-            }
+            std::string writeableData;
 
-            // Write the encrypted data to file
-            std::ofstream file(filename, std::ios::binary);
+            if(encryption)
+            {
+                // Encrypt the JSON data
+                std::string encryptedData = encrypt(jsonData);
+                if (encryptedData.empty())
+                {
+                    std::cerr << "DataReaderWriter::writeData() Error: Encryption failed" << std::endl;
+                    return false;
+                }
+                writeableData = encryptedData;
+            }
+            else // no encryption
+                writeableData = jsonData;
+
+            // Write the data to file
+            auto openmode = encryption ? std::ios::binary : std::ios::out;
+            std::ofstream file(filename, openmode);
             if (!file.is_open())
             {
                 std::cerr << "DataReaderWriter::writeData() Error: Could not open file for writing: " << filename << std::endl;
                 return false;
             }
 
-            file.write(encryptedData.c_str(), encryptedData.size());
+            file.write(writeableData.c_str(), writeableData.size());
             if (!file.good())
             {
                 std::cerr << "DataReaderWriter::writeData() Error: File write failed" << std::endl;
@@ -150,7 +194,7 @@ namespace datacoe
         }
     }
 
-    std::optional<GameData> DataReaderWriter::readData(const std::string &filename)
+    std::optional<GameData> DataReaderWriter::readData(const std::string &filename, bool decryption)
     {
         try
         {
@@ -160,30 +204,49 @@ namespace datacoe
                 return std::nullopt;
             }
 
-            // Read the encrypted data from file
-            std::ifstream file(filename, std::ios::binary);
+            bool fileIsEncrypted = isFileEncrypted(filename);
+            if(fileIsEncrypted != decryption)
+            {
+                std::cerr << "DataReaderWriter::readData() Warning: "
+                          << (fileIsEncrypted ? "File is encrypted but decryption=false" 
+                                              : "File is not encrypted but decryption=true")
+                          << " - Adjusting decryption flag to match file state" << std::endl;
+                decryption = fileIsEncrypted;
+            }
+
+            // Read the data from file
+            auto openmode = decryption ? std::ios::binary : std::ios::in;
+            std::ifstream file(filename, openmode);
             if (!file.is_open())
             {
                 std::cerr << "DataReaderWriter::readData() Error: Could not open file for reading: " << filename << std::endl;
                 return std::nullopt;
             }
 
-            std::string encodedData((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+            std::string data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
             file.close();
 
-            // Decrypt the data
-            std::string decryptedData = decrypt(encodedData);
-            if (decryptedData.empty())
-            {
-                std::cerr << "DataReaderWriter::readData() Error: Decryption failed" << std::endl;
-                return std::nullopt;
-            }
+            std::string parseableData;
 
-            std::cout << "Debug: Decrypted JSON: " << std::endl
-                      << decryptedData << std::endl;
+            if(decryption)
+            {
+                // Decrypt the data
+                std::string decryptedData = decrypt(data);
+                if (decryptedData.empty())
+                {
+                    std::cerr << "DataReaderWriter::readData() Error: Decryption failed" << std::endl;
+                    return std::nullopt;
+                }
+
+                std::cout << "Debug: Decrypted JSON: " << std::endl
+                        << decryptedData << std::endl;
+                parseableData = decryptedData;
+            }
+            else // no decryption
+                parseableData = data;
 
             // Parse the JSON data
-            json j = json::parse(decryptedData);
+            json j = json::parse(parseableData);
             return GameData::fromJson(j);
         }
         catch (const json::exception &e)

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <array>
 #include "json.hpp"
 
 using json = nlohmann::json;
@@ -18,10 +17,10 @@ namespace datacoe
     public:
         GameData(const std::string &nickname = "", const int highscore = 0);
 
-        void setNickName(const std::string &nickname);
-        void setHighScore(int highscore);
+        void setNickname(const std::string &nickname);
+        void setHighscore(int highscore);
 
-        const std::string &getNickName() const;
+        const std::string &getNickname() const;
         int getHighscore() const;
 
         json toJson() const;

@@ -48,7 +48,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE cryptopp)
 
 target_include_directories(${PROJECT_NAME} PUBLIC 
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_BINARY_DIR}/cryptopp-cmake
     ${json_SOURCE_DIR}/single_include/nlohmann)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)

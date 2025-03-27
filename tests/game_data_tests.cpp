@@ -1,55 +1,54 @@
 #include "gtest/gtest.h"
-#include "game_data.hpp"
+#include "datacoe/game_data.hpp"
 #include <iostream>
 
 namespace datacoe
 {
-
     TEST(GameDataTest, DefaultConstructor)
     {
         GameData gd;
-        ASSERT_EQ(gd.getNickName(), "");
+        ASSERT_EQ(gd.getNickname(), "");
         ASSERT_EQ(gd.getHighscore(), 0);
     }
 
     TEST(GameDataTest, ParameterizedConstructor)
     {
         GameData gd("Player1", 500);
-        ASSERT_EQ(gd.getNickName(), "Player1");
+        ASSERT_EQ(gd.getNickname(), "Player1");
         ASSERT_EQ(gd.getHighscore(), 500);
     }
 
     TEST(GameDataTest, SetAndGetNickname)
     {
         GameData gd;
-        gd.setNickName("TestName");
-        ASSERT_EQ(gd.getNickName(), "TestName");
+        gd.setNickname("TestName");
+        ASSERT_EQ(gd.getNickname(), "TestName");
 
         // Test changing nickname
-        gd.setNickName("NewName");
-        ASSERT_EQ(gd.getNickName(), "NewName");
+        gd.setNickname("NewName");
+        ASSERT_EQ(gd.getNickname(), "NewName");
 
         // Test empty nickname
-        gd.setNickName("");
-        ASSERT_EQ(gd.getNickName(), "");
+        gd.setNickname("");
+        ASSERT_EQ(gd.getNickname(), "");
     }
 
     TEST(GameDataTest, SetAndGetHighscore)
     {
         GameData gd;
-        gd.setHighScore(300);
+        gd.setHighscore(300);
         ASSERT_EQ(gd.getHighscore(), 300);
 
         // Test changing highscore
-        gd.setHighScore(400);
+        gd.setHighscore(400);
         ASSERT_EQ(gd.getHighscore(), 400);
 
         // Test zero highscore
-        gd.setHighScore(0);
+        gd.setHighscore(0);
         ASSERT_EQ(gd.getHighscore(), 0);
 
         // Test negative highscore (if allowed by your game's rules)
-        gd.setHighScore(-10);
+        gd.setHighscore(-10);
         ASSERT_EQ(gd.getHighscore(), -10);
     }
 
@@ -82,7 +81,7 @@ namespace datacoe
 
         GameData gd = GameData::fromJson(j);
 
-        ASSERT_EQ(gd.getNickName(), "JsonTest");
+        ASSERT_EQ(gd.getNickname(), "JsonTest");
         ASSERT_EQ(gd.getHighscore(), 400);
     }
 
@@ -94,7 +93,7 @@ namespace datacoe
 
         GameData gd = GameData::fromJson(j);
 
-        ASSERT_EQ(gd.getNickName(), "");
+        ASSERT_EQ(gd.getNickname(), "");
         ASSERT_EQ(gd.getHighscore(), 400);
     }
 
@@ -104,7 +103,7 @@ namespace datacoe
         json j = original.toJson();
         GameData restored = GameData::fromJson(j);
 
-        ASSERT_EQ(restored.getNickName(), original.getNickName());
+        ASSERT_EQ(restored.getNickname(), original.getNickname());
         ASSERT_EQ(restored.getHighscore(), original.getHighscore());
     }
 
@@ -151,7 +150,7 @@ namespace datacoe
         // Extra fields should be ignored
         GameData gd = GameData::fromJson(j);
 
-        ASSERT_EQ(gd.getNickName(), "TestName");
+        ASSERT_EQ(gd.getNickname(), "TestName");
         ASSERT_EQ(gd.getHighscore(), 400);
     }
 
@@ -163,7 +162,7 @@ namespace datacoe
 
         GameData gd = GameData::fromJson(j);
 
-        ASSERT_EQ(gd.getNickName(), "Test@#$%^&*()");
+        ASSERT_EQ(gd.getNickname(), "Test@#$%^&*()");
         ASSERT_EQ(gd.getHighscore(), 400);
     }
 
@@ -183,16 +182,16 @@ namespace datacoe
         GameData original("Original", 100);
         GameData copy = original;
 
-        ASSERT_EQ(copy.getNickName(), "Original");
+        ASSERT_EQ(copy.getNickname(), "Original");
         ASSERT_EQ(copy.getHighscore(), 100);
 
         // Modifying copy shouldn't affect original
-        copy.setNickName("Modified");
-        copy.setHighScore(200);
+        copy.setNickname("Modified");
+        copy.setHighscore(200);
 
-        ASSERT_EQ(original.getNickName(), "Original");
+        ASSERT_EQ(original.getNickname(), "Original");
         ASSERT_EQ(original.getHighscore(), 100);
-        ASSERT_EQ(copy.getNickName(), "Modified");
+        ASSERT_EQ(copy.getNickname(), "Modified");
         ASSERT_EQ(copy.getHighscore(), 200);
     }
 
@@ -203,16 +202,16 @@ namespace datacoe
 
         assigned = original;
 
-        ASSERT_EQ(assigned.getNickName(), "Original");
+        ASSERT_EQ(assigned.getNickname(), "Original");
         ASSERT_EQ(assigned.getHighscore(), 100);
 
         // Modifying assigned shouldn't affect original
-        assigned.setNickName("Modified");
-        assigned.setHighScore(200);
+        assigned.setNickname("Modified");
+        assigned.setHighscore(200);
 
-        ASSERT_EQ(original.getNickName(), "Original");
+        ASSERT_EQ(original.getNickname(), "Original");
         ASSERT_EQ(original.getHighscore(), 100);
-        ASSERT_EQ(assigned.getNickName(), "Modified");
+        ASSERT_EQ(assigned.getNickname(), "Modified");
         ASSERT_EQ(assigned.getHighscore(), 200);
     }
 

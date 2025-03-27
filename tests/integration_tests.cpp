@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
-#include "data_manager.hpp"
-#include "data_reader_writer.hpp"
+#include "datacoe/data_manager.hpp"
+#include "datacoe/data_reader_writer.hpp"
 #include <filesystem>
 #include <fstream>
 #include <thread>
@@ -8,10 +8,11 @@
 
 namespace datacoe
 {
-
     class IntegrationTest : public ::testing::Test
     {
     protected:
+        std::string m_testFilename;
+
         void SetUp() override
         {
             m_testFilename = "test_integration.json";
@@ -52,8 +53,6 @@ namespace datacoe
                 }
             }
         }
-
-        std::string m_testFilename;
     };
 
     TEST_F(IntegrationTest, FullLifecycle)
@@ -68,21 +67,24 @@ namespace datacoe
 
             // 3. Load with DataManager
             DataManager dm;
-            dm.init(m_testFilename);
+            bool loadResult = dm.init(m_testFilename);
+            ASSERT_TRUE(loadResult) << "init() should return true when loading an existing file";
 
             // 4. Verify data loaded correctly
-            const GameData &loadedData = dm.getGameData();
-            ASSERT_EQ(loadedData.getNickName(), "IntegrationTest");
+            const GameData &loadedData = dm.getGamedata();
+            ASSERT_EQ(loadedData.getNickname(), "IntegrationTest");
             ASSERT_EQ(loadedData.getHighscore(), 1000);
 
             // 5. Modify and save with DataManager
-            dm.setHighScore(2000);
+            GameData updatedData = dm.getGamedata();
+            updatedData.setHighscore(2000);
+            dm.setGamedata(updatedData);
             ASSERT_TRUE(dm.saveGame());
 
             // 6. Read directly with DataReaderWriter
             std::optional<GameData> readData = DataReaderWriter::readData(m_testFilename);
             ASSERT_TRUE(readData.has_value());
-            ASSERT_EQ(readData.value().getNickName(), "IntegrationTest");
+            ASSERT_EQ(readData.value().getNickname(), "IntegrationTest");
             ASSERT_EQ(readData.value().getHighscore(), 2000);
         }
         catch (const std::exception &e)
@@ -97,33 +99,42 @@ namespace datacoe
         {
             // Create and use multiple DataManager instances with the same file
             DataManager dm1;
-            dm1.init(m_testFilename);
-            dm1.setNickName("Player1");
-            dm1.setHighScore(100);
+            bool initResult1 = dm1.init(m_testFilename);
+            ASSERT_FALSE(initResult1) << "init() should return false for new file";
+
+            GameData data1;
+            data1.setNickname("Player1");
+            data1.setHighscore(100);
+            dm1.setGamedata(data1);
             ASSERT_TRUE(dm1.saveGame());
 
             // Create a second instance and load the data
             DataManager dm2;
-            dm2.init(m_testFilename);
-            ASSERT_EQ(dm2.getGameData().getNickName(), "Player1");
-            ASSERT_EQ(dm2.getGameData().getHighscore(), 100);
+            bool initResult2 = dm2.init(m_testFilename);
+            ASSERT_TRUE(initResult2) << "init() should return true when loading existing file";
+            ASSERT_EQ(dm2.getGamedata().getNickname(), "Player1");
+            ASSERT_EQ(dm2.getGamedata().getHighscore(), 100);
 
             // Modify with the second instance
-            dm2.setHighScore(200);
+            GameData data2 = dm2.getGamedata();
+            data2.setHighscore(200);
+            dm2.setGamedata(data2);
             ASSERT_TRUE(dm2.saveGame());
 
             // Create a third instance and check data
             DataManager dm3;
-            dm3.init(m_testFilename);
-            ASSERT_EQ(dm3.getGameData().getNickName(), "Player1");
-            ASSERT_EQ(dm3.getGameData().getHighscore(), 200);
+            bool initResult3 = dm3.init(m_testFilename);
+            ASSERT_TRUE(initResult3) << "init() should return true when loading existing file";
+            ASSERT_EQ(dm3.getGamedata().getNickname(), "Player1");
+            ASSERT_EQ(dm3.getGamedata().getHighscore(), 200);
 
             // Original instance should still have old data in memory
-            ASSERT_EQ(dm1.getGameData().getHighscore(), 100);
+            ASSERT_EQ(dm1.getGamedata().getHighscore(), 100);
 
             // After reloading, it should see the new data
-            dm1.loadGame();
-            ASSERT_EQ(dm1.getGameData().getHighscore(), 200);
+            bool loadResult = dm1.loadGame();
+            ASSERT_TRUE(loadResult) << "loadGame() should return true when file exists";
+            ASSERT_EQ(dm1.getGamedata().getHighscore(), 200);
         }
         catch (const std::exception &e)
         {
@@ -137,9 +148,13 @@ namespace datacoe
         {
             // Setup initial valid data
             DataManager dm1;
-            dm1.init(m_testFilename);
-            dm1.setNickName("ValidData");
-            dm1.setHighScore(100);
+            bool initResult1 = dm1.init(m_testFilename);
+            ASSERT_FALSE(initResult1) << "init() should return false for new file";
+
+            GameData data1;
+            data1.setNickname("ValidData");
+            data1.setHighscore(100);
+            dm1.setGamedata(data1);
             ASSERT_TRUE(dm1.saveGame());
 
             // Corrupt the file
@@ -151,27 +166,30 @@ namespace datacoe
 
             // Try to load corrupted data
             DataManager dm2;
-            dm2.init(m_testFilename);
+            bool initResult2 = dm2.init(m_testFilename);
+            ASSERT_FALSE(initResult2) << "init() should return false for corrupted file";
 
             // Should initialize with default empty values
-            ASSERT_EQ(dm2.getGameData().getNickName(), "");
-            ASSERT_EQ(dm2.getGameData().getHighscore(), 0);
+            ASSERT_EQ(dm2.getGamedata().getNickname(), "");
+            ASSERT_EQ(dm2.getGamedata().getHighscore(), 0);
 
             // Save new data
-            dm2.setNickName("RecoveredData");
-            dm2.setHighScore(300);
+            GameData data2;
+            data2.setNickname("RecoveredData");
+            data2.setHighscore(300);
+            dm2.setGamedata(data2);
             ASSERT_TRUE(dm2.saveGame());
 
             // Verify the new data was saved correctly
             DataManager dm3;
-            dm3.init(m_testFilename);
-            ASSERT_EQ(dm3.getGameData().getNickName(), "RecoveredData");
-            ASSERT_EQ(dm3.getGameData().getHighscore(), 300);
+            bool initResult3 = dm3.init(m_testFilename);
+            ASSERT_TRUE(initResult3) << "init() should return true when loading the repaired file";
+            ASSERT_EQ(dm3.getGamedata().getNickname(), "RecoveredData");
+            ASSERT_EQ(dm3.getGamedata().getHighscore(), 300);
         }
         catch (const std::exception &e)
         {
             FAIL() << "Unexpected exception: " << e.what();
         }
     }
-
 } // namespace datacoe

@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "data_manager.hpp"
+#include "datacoe/data_manager.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -14,10 +14,12 @@
 
 namespace datacoe
 {
-
     class ErrorHandlingTest : public ::testing::Test
     {
     protected:
+        std::string m_testFilename;
+        std::string m_corruptFilename;
+
         void SetUp() override
         {
             m_testFilename = "error_test_data.json";
@@ -72,18 +74,20 @@ namespace datacoe
             }
         }
 
-        std::string m_testFilename;
-        std::string m_corruptFilename;
-
         // Helper to create a corrupted file
         void createCorruptJsonFile()
         {
             // First create a valid file
             {
                 DataManager dm;
-                dm.init(m_corruptFilename);
-                dm.setNickName("ValidData");
-                dm.setHighScore(500);
+                bool initResult = dm.init(m_corruptFilename);
+                ASSERT_FALSE(initResult) << "init() should return false for new file";
+
+                GameData gameData;
+                gameData.setNickname("ValidData");
+                gameData.setHighscore(500);
+                dm.setGamedata(gameData);
+
                 bool saveResult = dm.saveGame();
                 ASSERT_TRUE(saveResult) << "Failed to create initial file for corruption test";
             }
@@ -103,8 +107,12 @@ namespace datacoe
             {
                 DataManager dm;
                 dm.init(m_testFilename);
-                dm.setNickName("ReadOnly");
-                dm.setHighScore(100);
+
+                GameData gameData;
+                gameData.setNickname("ReadOnly");
+                gameData.setHighscore(100);
+                dm.setGamedata(gameData);
+
                 bool saveResult = dm.saveGame();
                 if (!saveResult)
                 {
@@ -124,8 +132,12 @@ namespace datacoe
             {
                 DataManager dm;
                 dm.init(m_testFilename);
-                dm.setNickName("ReadOnly");
-                dm.setHighScore(100);
+
+                GameData gameData;
+                gameData.setNickname("ReadOnly");
+                gameData.setHighscore(100);
+                dm.setGamedata(gameData);
+
                 bool saveResult = dm.saveGame();
                 if (!saveResult)
                 {
@@ -160,22 +172,26 @@ namespace datacoe
 
         // Attempt to load corrupt data
         DataManager dm;
-        dm.init(m_corruptFilename);
+        bool initResult = dm.init(m_corruptFilename);
+        ASSERT_FALSE(initResult) << "init() should return false for corrupted file";
 
         // Should either initialize with defaults or throw an exception
         // Either way, the manager should be in a valid state
 
         // Just check that we can still use the manager
-        dm.setNickName("RecoveredData");
-        dm.setHighScore(999);
+        GameData gameData;
+        gameData.setNickname("RecoveredData");
+        gameData.setHighscore(999);
+        dm.setGamedata(gameData);
         bool saveResult = dm.saveGame();
         ASSERT_TRUE(saveResult) << "Failed to save after recovery";
 
         // Try loading again - should work now
         DataManager dm2;
-        dm2.init(m_corruptFilename);
-        ASSERT_EQ(dm2.getGameData().getNickName(), "RecoveredData");
-        ASSERT_EQ(dm2.getGameData().getHighscore(), 999);
+        bool loadResult = dm2.init(m_corruptFilename);
+        ASSERT_TRUE(loadResult) << "init() should return true after file is repaired";
+        ASSERT_EQ(dm2.getGamedata().getNickname(), "RecoveredData");
+        ASSERT_EQ(dm2.getGamedata().getHighscore(), 999);
     }
 
     TEST_F(ErrorHandlingTest, NonExistentDirectory)
@@ -183,11 +199,14 @@ namespace datacoe
         std::string nonExistentPath = "non/existent/directory/file.json";
 
         DataManager dm;
-        dm.init(nonExistentPath);
+        bool initResult = dm.init(nonExistentPath);
+        ASSERT_FALSE(initResult) << "init() should return false for non-existent directory";
 
         // Should still be able to set data
-        dm.setNickName("TestNonExistent");
-        dm.setHighScore(123);
+        GameData gameData;
+        gameData.setNickname("TestNonExistent");
+        gameData.setHighscore(123);
+        dm.setGamedata(gameData);
 
         // Save will likely fail but shouldn't crash
         bool saveResult = dm.saveGame();
@@ -202,11 +221,14 @@ namespace datacoe
     TEST_F(ErrorHandlingTest, EmptyFilename)
     {
         DataManager dm;
-        dm.init(""); // Empty filename
+        bool initResult = dm.init(""); // Empty filename
+        ASSERT_FALSE(initResult) << "init() should return false for empty filename";
 
         // Should still be able to use the manager
-        dm.setNickName("EmptyFilename");
-        dm.setHighScore(123);
+        GameData gameData;
+        gameData.setNickname("EmptyFilename");
+        gameData.setHighscore(123);
+        dm.setGamedata(gameData);
 
         // Save may fail but shouldn't crash
         bool saveResult = dm.saveGame();
@@ -224,9 +246,13 @@ namespace datacoe
 
         // Try to save to a read-only file
         DataManager dm;
-        dm.init(m_testFilename);
-        dm.setNickName("NewData");
-        dm.setHighScore(200);
+        bool initResult = dm.init(m_testFilename);
+        ASSERT_TRUE(initResult) << "init() should return true when loading existing file";
+
+        GameData gameData;
+        gameData.setNickname("NewData");
+        gameData.setHighscore(200);
+        dm.setGamedata(gameData);
 
         // Save will likely fail but shouldn't crash
         bool saveResult = dm.saveGame();
@@ -244,9 +270,14 @@ namespace datacoe
         // First create valid data
         {
             DataManager dm;
-            dm.init(m_testFilename);
-            dm.setNickName("Original");
-            dm.setHighScore(100);
+            bool initResult = dm.init(m_testFilename);
+            ASSERT_FALSE(initResult) << "init() should return false for new file";
+
+            GameData gameData;
+            gameData.setNickname("Original");
+            gameData.setHighscore(100);
+            dm.setGamedata(gameData);
+
             bool saveResult = dm.saveGame();
             ASSERT_TRUE(saveResult) << "Failed to save initial data";
         }
@@ -260,19 +291,23 @@ namespace datacoe
 
         // Try to load the truncated file
         DataManager dm;
-        dm.init(m_testFilename);
+        bool initResult = dm.init(m_testFilename);
+        ASSERT_FALSE(initResult) << "init() should return false for truncated file";
 
         // Manager should still be usable
-        dm.setNickName("Recovered");
-        dm.setHighScore(200);
+        GameData gameData;
+        gameData.setNickname("Recovered");
+        gameData.setHighscore(200);
+        dm.setGamedata(gameData);
         bool saveResult = dm.saveGame();
         ASSERT_TRUE(saveResult) << "Failed to save after recovery";
 
         // Verify recovery worked
         DataManager dm2;
-        dm2.init(m_testFilename);
-        ASSERT_EQ(dm2.getGameData().getNickName(), "Recovered");
-        ASSERT_EQ(dm2.getGameData().getHighscore(), 200);
+        bool loadResult = dm2.init(m_testFilename);
+        ASSERT_TRUE(loadResult) << "init() should return true for repaired file";
+        ASSERT_EQ(dm2.getGamedata().getNickname(), "Recovered");
+        ASSERT_EQ(dm2.getGamedata().getHighscore(), 200);
     }
 
     TEST_F(ErrorHandlingTest, MalformedJson)
@@ -286,19 +321,23 @@ namespace datacoe
 
         // Try to load the malformed file
         DataManager dm;
-        dm.init(m_testFilename);
+        bool initResult = dm.init(m_testFilename);
+        ASSERT_FALSE(initResult) << "init() should return false for malformed JSON";
 
         // Verify we can save valid data
-        dm.setNickName("FixedData");
-        dm.setHighScore(300);
+        GameData gameData;
+        gameData.setNickname("FixedData");
+        gameData.setHighscore(300);
+        dm.setGamedata(gameData);
         bool saveResult = dm.saveGame();
         ASSERT_TRUE(saveResult) << "Failed to save after malformed JSON recovery";
 
         // Check that the data was saved correctly
         DataManager dm2;
-        dm2.init(m_testFilename);
-        ASSERT_EQ(dm2.getGameData().getNickName(), "FixedData");
-        ASSERT_EQ(dm2.getGameData().getHighscore(), 300);
+        bool loadResult = dm2.init(m_testFilename);
+        ASSERT_TRUE(loadResult) << "init() should return true after saving valid data";
+        ASSERT_EQ(dm2.getGamedata().getNickname(), "FixedData");
+        ASSERT_EQ(dm2.getGamedata().getHighscore(), 300);
     }
 
 } // namespace datacoe
