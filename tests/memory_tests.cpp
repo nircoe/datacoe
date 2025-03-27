@@ -7,10 +7,11 @@
 
 namespace datacoe
 {
-
     class MemoryTest : public ::testing::Test
     {
     protected:
+        std::string m_testFilename;
+        
         void SetUp() override
         {
             m_testFilename = "memory_test_data.json";
@@ -42,8 +43,6 @@ namespace datacoe
                 // Ignore errors
             }
         }
-
-        std::string m_testFilename;
     };
 
     TEST_F(MemoryTest, RepeatedCreationAndDestruction)

@@ -8,10 +8,11 @@
 
 namespace datacoe
 {
-
     class IntegrationTest : public ::testing::Test
     {
     protected:
+        std::string m_testFilename;
+        
         void SetUp() override
         {
             m_testFilename = "test_integration.json";
@@ -52,8 +53,6 @@ namespace datacoe
                 }
             }
         }
-
-        std::string m_testFilename;
     };
 
     TEST_F(IntegrationTest, FullLifecycle)

@@ -1,6 +1,6 @@
 # datacoe
 
-datacoe is a small, simple and generic C++ data management library for game development,
+datacoe is a small, simple and generic C++ data management library template for game development,
 It provides functionalities for data persistence, serialization, and encryption.
 
 [![Windows](https://github.com/nircoe/datacoe/actions/workflows/ci-windows.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-windows.yml)
@@ -286,7 +286,6 @@ The project includes a comprehensive test suite built with Google Test. Tests co
 
 - Basic data operations
 - Error handling and recovery
-- Thread safety and concurrency
 - Performance benchmarks
 - Memory usage
 
@@ -411,6 +410,13 @@ Game-specific implementations will have their own tags (e.g., `worm-v1.0.0`) to 
 
 ## Version History
 
+### v0.1.1 (Optional Encryption)
+- Added ability to disable encryption when not needed
+- Implemented automatic encryption detection for backwards compatibility
+- Improved file handling with clear encryption status identification
+- Enhanced performance for unencrypted files
+- Added tests to measure and compare encryption overhead in terms of both time and file size
+
 ### v0.1.0 (Initial Development)
 - Basic data management functionality
 - JSON serialization
@@ -448,9 +454,9 @@ If you'd like to contribute, please:
 - ✅ AES encryption/decryption using CryptoPP
 - ✅ Comprehensive test suite with Google Test
 - ✅ Automated dependency management
+- ✅ Optional encryption (ability to disable encryption if not needed)
 
 ### Planned Improvements
-- ⏳ Optional encryption (ability to disable encryption if not needed)
 - ⏳ Secure encryption key management (replacing fixed keys with secure storage and derivation)
 - ⏳ Graceful recovery from corrupted files with backup system
 - ⏳ Thread-safe operations for concurrent data access

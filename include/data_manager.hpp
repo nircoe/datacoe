@@ -11,6 +11,8 @@ namespace datacoe
     {
         std::string m_filename;
         GameData m_gamedata;
+        bool m_encrypt = true;             // Whether to use encryption
+        bool m_fileEncrypted = false;       // Whether the file is currently encrypted
 
     public:
         // Users should add or modify constructors and destructor as needed
@@ -22,7 +24,7 @@ namespace datacoe
         bool loadGame();
 
         // Users should modify the initialization to match their own game
-        void init(const std::string filename);
+        void init(const std::string filename, bool encrypt = true);
 
         // Users should modify this method to match their own game
         void newGame();
@@ -32,5 +34,9 @@ namespace datacoe
         void setHighScore(int highscore);
 
         const GameData &getGameData() const;
+
+        // Encryption related methods
+        bool isEncrypted() const;
+        void setEncryption(bool encrypt);
     };
 } // namespace datacoe

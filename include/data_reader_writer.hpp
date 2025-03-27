@@ -13,7 +13,8 @@ namespace datacoe
         static std::string decrypt(const std::string &encodedData);
 
     public:
-        static bool writeData(const GameData &gamedata, const std::string &filename);
-        static std::optional<GameData> readData(const std::string &filename);
+        static bool isFileEncrypted(const std::string &filename);
+        static bool writeData(const GameData &gamedata, const std::string &filename, bool encryption = true);
+        static std::optional<GameData> readData(const std::string &filename, bool decryption = true);
     };
 } // namespace datacoe

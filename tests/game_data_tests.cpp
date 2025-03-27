@@ -4,7 +4,6 @@
 
 namespace datacoe
 {
-
     TEST(GameDataTest, DefaultConstructor)
     {
         GameData gd;

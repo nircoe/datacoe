@@ -10,10 +10,11 @@
 
 namespace datacoe
 {
-
     class PerformanceTest : public ::testing::Test
     {
     protected:
+        std::string m_testFilename;
+
         void SetUp() override
         {
             m_testFilename = "perf_test_data.json";
@@ -54,8 +55,6 @@ namespace datacoe
             auto end = std::chrono::high_resolution_clock::now();
             return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
         }
-
-        std::string m_testFilename;
     };
 
     TEST_F(PerformanceTest, SavePerformance)
@@ -182,17 +181,17 @@ namespace datacoe
 
             switch (operation)
             {
-            case 0: // Save
-                dm.setNickName(names[nameDist(gen)]);
-                dm.setHighScore(scoreDist(gen));
-                dm.saveGame();
-                break;
-            case 1: // Load
-                dm.loadGame();
-                break;
-            case 2: // New game
-                dm.newGame();
-                break;
+                case 0: // Save
+                    dm.setNickName(names[nameDist(gen)]);
+                    dm.setHighScore(scoreDist(gen));
+                    dm.saveGame();
+                    break;
+                case 1: // Load
+                    dm.loadGame();
+                    break;
+                case 2: // New game
+                    dm.newGame();
+                    break;
             }
         }
 
@@ -214,4 +213,149 @@ namespace datacoe
         ASSERT_EQ(dm2.getGameData().getHighscore(), 12345);
     }
 
+    TEST_F(PerformanceTest, EncryptionPerformanceComparison)
+    {
+        constexpr int iterations = 50;
+
+        // Setup test data
+        GameData testData("PerformanceTest", 12345);
+        std::string encryptedFilename = m_testFilename + ".encrypted";
+        std::string unencryptedFilename = m_testFilename + ".unencrypted";
+
+        std::vector<long long> encryptedSaveTimings;
+        std::vector<long long> unencryptedSaveTimings;
+        std::vector<long long> encryptedLoadTimings;
+        std::vector<long long> unencryptedLoadTimings;
+
+        try
+        {
+            encryptedSaveTimings.reserve(iterations);
+            unencryptedSaveTimings.reserve(iterations);
+            encryptedLoadTimings.reserve(iterations);
+            unencryptedLoadTimings.reserve(iterations);
+
+            // Create initial files
+            ASSERT_TRUE(DataReaderWriter::writeData(testData, encryptedFilename, true));
+            ASSERT_TRUE(DataReaderWriter::writeData(testData, unencryptedFilename, false));
+
+            // Measure save performance
+            for (int i = 0; i < iterations; i++)
+            {
+                // Modify data slightly to avoid caching effects
+                testData.setHighScore(12345 + i);
+
+                // Measure encrypted save
+                auto encryptedSaveTime = measureExecutionTime([&]()
+                                                              { DataReaderWriter::writeData(testData, encryptedFilename, true); });
+                encryptedSaveTimings.push_back(encryptedSaveTime);
+
+                // Measure unencrypted save
+                auto unencryptedSaveTime = measureExecutionTime([&]()
+                                                                { DataReaderWriter::writeData(testData, unencryptedFilename, false); });
+                unencryptedSaveTimings.push_back(unencryptedSaveTime);
+            }
+
+            // Measure load performance
+            for (int i = 0; i < iterations; i++)
+            {
+                // Measure encrypted load
+                auto encryptedLoadTime = measureExecutionTime([&]()
+                                                              { auto data = DataReaderWriter::readData(encryptedFilename, true); });
+                encryptedLoadTimings.push_back(encryptedLoadTime);
+
+                // Measure unencrypted load
+                auto unencryptedLoadTime = measureExecutionTime([&]()
+                                                                { auto data = DataReaderWriter::readData(unencryptedFilename, false); });
+                unencryptedLoadTimings.push_back(unencryptedLoadTime);
+            }
+
+            // Calculate statistics for encrypted save
+            double encSaveAvg = 0.0;
+            for (auto time : encryptedSaveTimings)
+            {
+                encSaveAvg += time;
+            }
+            encSaveAvg /= iterations;
+
+            // Calculate statistics for unencrypted save
+            double unencSaveAvg = 0.0;
+            for (auto time : unencryptedSaveTimings)
+            {
+                unencSaveAvg += time;
+            }
+            unencSaveAvg /= iterations;
+
+            // Calculate statistics for encrypted load
+            double encLoadAvg = 0.0;
+            for (auto time : encryptedLoadTimings)
+            {
+                encLoadAvg += time;
+            }
+            encLoadAvg /= iterations;
+
+            // Calculate statistics for unencrypted load
+            double unencLoadAvg = 0.0;
+            for (auto time : unencryptedLoadTimings)
+            {
+                unencLoadAvg += time;
+            }
+            unencLoadAvg /= iterations;
+
+            // Calculate performance impact percentages
+            double saveImpact = ((encSaveAvg / unencSaveAvg) - 1.0) * 100.0;
+            double loadImpact = ((encLoadAvg / unencLoadAvg) - 1.0) * 100.0;
+
+            // Output results
+            std::cout << "=============================================" << std::endl;
+            std::cout << "     Encryption Performance Comparison" << std::endl;
+            std::cout << "=============================================" << std::endl;
+            std::cout << std::fixed << std::setprecision(2);
+            std::cout << "Save operations (microseconds):" << std::endl;
+            std::cout << "  Encrypted average: " << encSaveAvg << std::endl;
+            std::cout << "  Unencrypted average: " << unencSaveAvg << std::endl;
+            std::cout << "  Encryption overhead: " << (saveImpact > 0 ? "+" : "") << saveImpact << "%" << std::endl;
+            std::cout << std::endl;
+
+            std::cout << "Load operations (microseconds):" << std::endl;
+            std::cout << "  Encrypted average: " << encLoadAvg << std::endl;
+            std::cout << "  Unencrypted average: " << unencLoadAvg << std::endl;
+            std::cout << "  Encryption overhead: " << (loadImpact > 0 ? "+" : "") << loadImpact << "%" << std::endl;
+            std::cout << "=============================================" << std::endl;
+
+            // Also measure file size difference
+            std::uintmax_t encryptedSize = std::filesystem::file_size(encryptedFilename);
+            std::uintmax_t unencryptedSize = std::filesystem::file_size(unencryptedFilename);
+            double sizeImpact = ((double)encryptedSize / unencryptedSize - 1.0) * 100.0;
+
+            std::cout << "File size comparison:" << std::endl;
+            std::cout << "  Encrypted: " << encryptedSize << " bytes" << std::endl;
+            std::cout << "  Unencrypted: " << unencryptedSize << " bytes" << std::endl;
+            std::cout << "  Size overhead: " << (sizeImpact > 0 ? "+" : "") << sizeImpact << "%" << std::endl;
+            std::cout << "=============================================" << std::endl;
+        }
+        catch (const std::exception &e)
+        {
+            // Clean up in exception path
+            try
+            {
+                if (std::filesystem::exists(encryptedFilename))
+                    std::filesystem::remove(encryptedFilename);
+                if (std::filesystem::exists(unencryptedFilename))
+                    std::filesystem::remove(unencryptedFilename);
+            }
+            catch (...) { /* Ignore cleanup errors */ }
+
+            FAIL() << "Unexpected exception: " << e.what();
+        }
+
+        // Clean up in normal path
+        try
+        {
+            if (std::filesystem::exists(encryptedFilename))
+                std::filesystem::remove(encryptedFilename);
+            if (std::filesystem::exists(unencryptedFilename))
+                std::filesystem::remove(unencryptedFilename);
+        }
+        catch (...) { /* Ignore cleanup errors */ }
+    }
 } // namespace datacoe

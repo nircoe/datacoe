@@ -14,10 +14,12 @@
 
 namespace datacoe
 {
-
     class ErrorHandlingTest : public ::testing::Test
     {
     protected:
+        std::string m_testFilename;
+        std::string m_corruptFilename;
+        
         void SetUp() override
         {
             m_testFilename = "error_test_data.json";
@@ -71,9 +73,6 @@ namespace datacoe
                 std::cerr << "Exception during TearDown: " << e.what() << std::endl;
             }
         }
-
-        std::string m_testFilename;
-        std::string m_corruptFilename;
 
         // Helper to create a corrupted file
         void createCorruptJsonFile()

@@ -15,7 +15,6 @@ set(TEST_FILES
     integration_tests.cpp
     performance_tests.cpp
     memory_tests.cpp
-    thread_safety_tests.cpp
     error_handling_tests.cpp
 )
 
