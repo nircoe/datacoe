@@ -1,3 +1,6 @@
 [submodule "external/cryptopp-cmake"]
 	path = external/cryptopp-cmake
 	url = https://github.com/abdes/cryptopp-cmake.git
+[submodule "external/json"]
+	path = external/json
+	url = https://github.com/nlohmann/json.git

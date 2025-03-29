@@ -1,6 +1,5 @@
-#include "gtest/gtest.h"
-#include "datacoe/game_data.hpp"
-#include <iostream>
+#include <gtest/gtest.h>
+#include <datacoe/game_data.hpp>
 
 namespace datacoe
 {
