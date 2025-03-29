@@ -6,7 +6,6 @@
 
 namespace datacoe
 {
-    // No need to modify
     class DataReaderWriter
     {
         static std::string encrypt(const std::string &data);

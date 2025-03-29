@@ -9,20 +9,13 @@ namespace datacoe
         m_filename = filename;
         m_encrypt = encrypt;
 
-        if (!loadGame())
-        {
-            // can't load, needs to ask the user for a nickname and create new GameData
-            // or change for you own game logic
-            newGame();
-            return false;
-        }
-        return true;
+        return loadGame(); // if succeed, returns true, if not, returns false and GameManager will start new game
     }
 
     bool DataManager::saveGame()
     {
         if (m_gamedata.getNickname().empty())
-            return true; // no need to save (guest mode), modify for you own game logic
+            return true; // no need to save (guest mode)
 
         bool result = DataReaderWriter::writeData(m_gamedata, m_filename, m_encrypt);
         if (result)
@@ -42,9 +35,9 @@ namespace datacoe
         return readDataSucceed;
     }
 
-    void DataManager::newGame()
+    void DataManager::newGame(const std::string &nickname)
     {
-        m_gamedata = GameData();
+        m_gamedata = GameData(nickname);
     }
 
     void DataManager::setGamedata(const GameData &gamedata)

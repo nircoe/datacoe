@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <array>
 #include "game_data.hpp"
 
 namespace datacoe
@@ -17,7 +18,6 @@ namespace datacoe
         DataManager() = default;
         ~DataManager() = default;
 
-        // Users should modify the initialization to match their own game
         // returns true if succeed to load, or false if needs to start a new game
         bool init(const std::string filename, bool encrypt = true); 
 
@@ -26,7 +26,7 @@ namespace datacoe
         bool loadGame();
 
         // Users should modify this method to match their own game
-        void newGame();
+        void newGame(const std::string& nickname = "");
 
         // GameData specific methods, Users should modify to match their own game
         void setGamedata(const GameData &gamedata);
