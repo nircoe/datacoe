@@ -1,5 +1,4 @@
 #include "datacoe/game_data.hpp"
-#include <iostream>
 #include <stdexcept>
 
 namespace datacoe

@@ -1,60 +1,63 @@
 cmake_minimum_required(VERSION 3.14)
-project(datacoe)
+project(datacoe VERSION 0.1.1 LANGUAGES CXX)
 
-# Debug mode, feel free to modify to your desire
-set(CMAKE_BUILD_TYPE Debug)
-if(MSVC)
-    set(CMAKE_CXX_FLAGS_DEBUG "/Zi /DEBUG")
-    set(CMAKE_C_FLAGS_DEBUG "/Zi /DEBUG")
-else()
-    set(CMAKE_CXX_FLAGS_DEBUG "-g")
-    set(CMAKE_C_FLAGS_DEBUG "-g")
-endif()
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-include(FetchContent)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Currently fetching googletest v1.16.0, 
-# Feel free to upgrade and change the URL into the <commit hash>.zip file you would like to upgrade
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/6910c9d9165801d8827d628cb72eb7ea9dd538c5.zip
-  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-)
-if(WIN32)
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-endif()
-FetchContent_MakeAvailable(googletest)
+option(BUILD_TESTS "Build the test suite" ON)
 
+# dependencies from external/ (git submodules)
 add_subdirectory(external/cryptopp-cmake)
+add_subdirectory(external/json)
 
-# Currently fetching nlohmann/json v3.11.3,
-# Feel free to upgrade to your desired version.
-FetchContent_Declare(
-    json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.3
-)
-FetchContent_MakeAvailable(json)
+# project directories
+add_subdirectory(include)
+add_subdirectory(src)
 
-add_subdirectory(tests)
+if(BUILD_TESTS)
+    include(FetchContent)
+    # Currently fetching googletest v1.16.0, 
+    # Feel free to upgrade and change the URL into the <commit hash>.zip file you would like to upgrade
+    FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/6910c9d9165801d8827d628cb72eb7ea9dd538c5.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    if(WIN32)
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    endif()
+    FetchContent_MakeAvailable(googletest)
 
-add_library(${PROJECT_NAME}
-    src/game_data.cpp
-    src/data_reader_writer.cpp
-    src/data_manager.cpp
-)
-
-target_link_libraries(${PROJECT_NAME} PRIVATE cryptopp)
-
-target_include_directories(${PROJECT_NAME} PUBLIC 
-    ${CMAKE_SOURCE_DIR}/include
-    ${json_SOURCE_DIR}/single_include/nlohmann)
-
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
-
-# "Treat warnings as errors" behavior, Feel free to remove/modify it.
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror)
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(${PROJECT_NAME} PRIVATE /W3 /WX)
+    add_subdirectory(tests)
 endif()
+
+install(
+    FILES "${CMAKE_SOURCE_DIR}/external/json/single_include/nlohmann/json.hpp"
+    DESTINATION include/nlohmann
+)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/datacoeconfigversion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
+    set(CMAKE_INSTALL_LIBDIR lib)
+endif()
+
+install(
+    FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/datacoeconfigversion.cmake"
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/datacoeconfig.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/datacoe"
+)
+
+install(
+    EXPORT datacoeTargets
+    FILE datacoeTargets.cmake
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/datacoe"
+)
