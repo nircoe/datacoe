@@ -1,9 +1,7 @@
 #pragma once
 
 #include <string>
-#include <optional>
 #include "game_data.hpp"
-#include "data_reader_writer.hpp"
 
 namespace datacoe
 {
