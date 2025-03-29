@@ -101,7 +101,7 @@ cmake ..
 cmake --build .
 
 # Run tests (optional)
-./all_tests
+./tests/all_tests
 ```
 
 ### Integration Steps
@@ -120,13 +120,27 @@ cmake --build .
 
 4. **Integrate into Your Project:**
 
-   Add the library to your project's CMakeLists.txt:
+   There are two ways to integrate datacoe into your project:
+   
+   ### 4.1. Use as Subdirectory (Recommended for development)
+   
    ```cmake
    add_subdirectory(path/to/datacoe)
+   target_link_libraries(your_game_executable PRIVATE datacoe)
    ```
+
+   ### 4.2. Install and Use with find_package (Better for distribution)
    
-   Then link your executable with the library:
    ```cmake
+   # Build and install datacoe
+   cd path/to/datacoe
+   mkdir build && cd build
+   cmake ..
+   cmake --build .
+   cmake --install . --prefix <install_path>
+   
+   # In your project's CMakeLists.txt
+   find_package(datacoe REQUIRED)
    target_link_libraries(your_game_executable PRIVATE datacoe)
    ```
 
@@ -147,7 +161,7 @@ The library consists of three main components:
 #### Initialize and Save Game Data
 
 ```cpp
-#include "data_manager.hpp"
+#include <datacoe/data_manager.hpp>
 
 // Initialize with a file path
 datacoe::DataManager manager;
@@ -164,7 +178,7 @@ bool saveSuccess = manager.saveGame();
 #### Load Game Data
 
 ```cpp
-#include "data_manager.hpp"
+#include <datacoe/data_manager.hpp>
 
 // Initialize with the same file path
 datacoe::DataManager manager;
@@ -182,7 +196,7 @@ int score = data.getHighscore();
 #### Create New Game
 
 ```cpp
-#include "data_manager.hpp"
+#include <datacoe/data_manager.hpp>
 
 datacoe::DataManager manager;
 manager.init("save_game.json");
@@ -221,23 +235,23 @@ To adapt this library for your game, you'll need to modify the core components t
 
 ## Dependencies
 
-All dependencies are now automatically handled:
+All dependencies are automatically handled:
 
-- **CryptoPP:** Automatically fetched via the cryptopp-cmake Git submodule (currently points to version 8.9.0)
-- **nlohmann/json:** Automatically fetched by CMake during configuration (currently version 3.11.3)
-- **Google Test:** Automatically fetched by CMake during configuration (currently version 1.16.0)
+- **CryptoPP:** Added as a git submodule at external/cryptopp-cmake
+- **nlohmann/json:** Added as a git submodule at external/json
+- **Google Test:** Automatically fetched by CMake during configuration only if BUILD_TESTS is ON (currently version 1.16.0)
 
-You no longer need to manually download or build these dependencies.
+The nlohmann/json library is now included as a submodule (like cryptopp-cmake) rather than being fetched via CMake, providing more consistent dependency management and offline build capability.
 
 ### Updating Dependencies (optional)
 
-#### Updating the cryptopp-cmake submodule
+#### Updating the cryptopp-cmake or nlohmann/json submodules
 
-If you want to update the cryptopp-cmake submodule to a different version:
+If you want to update either submodule to a different version:
 
 ```bash
-# Navigate to the cryptopp-cmake directory
-cd external/cryptopp-cmake
+# Navigate to the submodule directory
+cd external/cryptopp-cmake  # or external/json
 
 # Fetch all tags
 git fetch --tags
@@ -246,30 +260,20 @@ git fetch --tags
 git tag -l
 
 # Checkout the specific tag you want
-git checkout <tag_name>  # e.g., CRYPTOPP_8_9_0
+git checkout <tag_name>  # e.g., CRYPTOPP_8_9_0 or v3.11.3
 
 # Return to the main project directory
 cd ../..
 
 # Now commit the submodule update
-git add external/cryptopp-cmake
-git commit -m "Update cryptopp-cmake to <tag_name>"
+git add external/cryptopp-cmake  # or external/json
+git commit -m "Update submodule to <tag_name>"
 ```
 
-#### Updating nlohmann/json and Google Test
+#### Updating Google Test
 
-To update nlohmann/json or Google Test to newer versions, modify the FetchContent_Declare section in your CMakeLists.txt:
+To update Google Test to a newer version, modify the FetchContent_Declare section in your CMakeLists.txt:
 
-For nlohmann/json:
-```cmake
-FetchContent_Declare(
-    json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.3  # Change this to the desired version
-)
-```
-
-For Google Test:
 ```cmake
 FetchContent_Declare(
   googletest
@@ -295,7 +299,7 @@ To run all tests:
 
 ```bash
 cd build
-./all_tests
+./tests/all_tests
 ```
 
 To build and run individual test executables, enable the `BUILD_INDIVIDUAL_TESTS` option:
@@ -303,7 +307,7 @@ To build and run individual test executables, enable the `BUILD_INDIVIDUAL_TESTS
 ```bash
 cmake -DBUILD_INDIVIDUAL_TESTS=ON ..
 cmake --build .
-./error_handling_tests  # Run a specific test
+./tests/error_handling_tests  # Run a specific test
 ```
 
 ### Customizing Tests
@@ -409,6 +413,13 @@ Game-specific implementations will have their own tags (e.g., `worm-v1.0.0`) to 
 [Back to top](#table-of-contents)
 
 ## Version History
+
+### [v0.1.2](https://github.com/nircoe/datacoe/releases/tag/v0.1.2) (CMake Modernization)
+- Reorganized CMake structure with subdirectory CMakeLists.txt files
+- Converted nlohmann/json from FetchContent to git submodule
+- Added proper installation targets for headers, library, and CMake config files
+- Implemented exported targets for easier integration in other projects
+- Added find_package support
 
 ### [v0.1.1](https://github.com/nircoe/datacoe/releases/tag/v0.1.1) (Optional Encryption)
 - Added ability to disable encryption when not needed
