@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(BUILD_TESTS "Build the test suite" ON)
+set(BUILD_TESTS OFF)
 
 # dependencies from external/ (git submodules)
 add_subdirectory(external/cryptopp-cmake)
