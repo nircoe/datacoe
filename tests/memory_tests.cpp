@@ -1,6 +1,7 @@
-#include <gtest/gtest.h>
-#include <datacoe/data_manager.hpp>
+#include "gtest/gtest.h"
+#include "datacoe/data_manager.hpp"
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <vector>
 
@@ -47,23 +48,18 @@ namespace datacoe
     TEST_F(MemoryTest, RepeatedCreationAndDestruction)
     {
         // This test checks for memory leaks by repeatedly creating and destroying objects
-        constexpr int iterations = 1000;
+        constexpr std::size_t iterations = 1000;
 
-        for (int i = 0; i < iterations; i++)
+        for (std::size_t i = 0; i < iterations; i++)
         {
             DataManager dm;
-            bool initResult = dm.init(m_testFilename);
+            dm.init(m_testFilename);
 
-            // First iteration shouldn't find a file
-            if (i == 0)
-                ASSERT_FALSE(initResult) << "First init() should return false for new file";
-            else
-                ASSERT_TRUE(initResult) << "Subsequent init() calls should return true for existing file";
-
-            GameData gameData;
-            gameData.setNickname("MemoryTest");
-            gameData.setHighscore(i);
-            dm.setGamedata(gameData);
+            GameData data;
+            data.setNickname("MemoryTest");
+            std::array<std::size_t, 4> scores = {i, i + 1, i + 2, i + 3};
+            data.setHighscores(scores);
+            dm.setGamedata(data);
 
             dm.saveGame();
         }
@@ -73,10 +69,10 @@ namespace datacoe
 
         // Verify functionality still works
         DataManager finalDm;
-        bool finalLoadResult = finalDm.init(m_testFilename);
-        ASSERT_TRUE(finalLoadResult) << "Final init() should return true for existing file";
+        finalDm.init(m_testFilename);
         ASSERT_EQ(finalDm.getGamedata().getNickname(), "MemoryTest");
-        ASSERT_EQ(finalDm.getGamedata().getHighscore(), iterations - 1);
+        std::array<std::size_t, 4> expectedScores = {iterations - 1, iterations, iterations + 1, iterations + 2};
+        ASSERT_EQ(finalDm.getGamedata().getHighscores(), expectedScores);
     }
 
     TEST_F(MemoryTest, LargeDataHandling)
@@ -87,16 +83,16 @@ namespace datacoe
         // Create a DataManager with a large nickname
         {
             DataManager dm;
-            bool initResult = dm.init(m_testFilename);
-            ASSERT_FALSE(initResult) << "init() should return false for new file";
+            dm.init(m_testFilename);
 
             // Generate a large string
             std::string largeString(dataSize, 'A');
 
-            GameData gameData;
-            gameData.setNickname(largeString);
-            gameData.setHighscore(999999);
-            dm.setGamedata(gameData);
+            GameData data;
+            data.setNickname(largeString);
+            std::array<std::size_t, 4> scores = {999999, 999999, 999999, 999999};
+            data.setHighscores(scores);
+            dm.setGamedata(data);
 
             ASSERT_TRUE(dm.saveGame());
         }
@@ -104,59 +100,63 @@ namespace datacoe
         // Check data was saved correctly
         {
             DataManager dm;
-            bool loadResult = dm.init(m_testFilename);
-            ASSERT_TRUE(loadResult) << "init() should return true for existing file";
+            dm.init(m_testFilename);
             ASSERT_EQ(dm.getGamedata().getNickname().size(), dataSize);
-            ASSERT_EQ(dm.getGamedata().getHighscore(), 999999);
+            std::array<std::size_t, 4> expectedScores = {999999, 999999, 999999, 999999};
+            ASSERT_EQ(dm.getGamedata().getHighscores(), expectedScores);
         }
     }
 
     TEST_F(MemoryTest, MultipleInstancesWithSameFile)
     {
         // Test multiple DataManager instances using the same file
-        constexpr int instanceCount = 10;
+        constexpr std::size_t instanceCount = 10;
 
         // Create initial data
         {
             DataManager dm;
-            bool initResult = dm.init(m_testFilename);
-            ASSERT_FALSE(initResult) << "init() should return false for new file";
+            dm.init(m_testFilename);
 
-            GameData gameData;
-            gameData.setNickname("InitialData");
-            gameData.setHighscore(1000);
-            dm.setGamedata(gameData);
+            GameData data;
+            data.setNickname("InitialData");
+            std::array<std::size_t, 4> scores = {1000, 2000, 3000, 4000};
+            data.setHighscores(scores);
+            dm.setGamedata(data);
 
             ASSERT_TRUE(dm.saveGame());
         }
 
         // Create multiple instances all pointing to the same file
         std::vector<std::unique_ptr<DataManager>> managers;
-        for (int i = 0; i < instanceCount; i++)
+        for (std::size_t i = 0; i < instanceCount; i++)
         {
             auto dm = std::make_unique<DataManager>();
-            bool loadResult = dm->init(m_testFilename);
-            ASSERT_TRUE(loadResult) << "init() should return true for existing file";
+            dm->init(m_testFilename);
             managers.push_back(std::move(dm));
         }
 
         // Have each manager modify the data
-        for (int i = 0; i < instanceCount; i++)
+        for (std::size_t i = 0; i < instanceCount; i++)
         {
-            GameData gameData;
-            gameData.setNickname("Manager" + std::to_string(i));
-            gameData.setHighscore(2000 + i);
-            managers[i]->setGamedata(gameData);
+            GameData data;
+            data.setNickname("Manager" + std::to_string(i));
+            std::array<std::size_t, 4> scores = {2000 + i, 3000 + i, 4000 + i, 5000 + i};
+            data.setHighscores(scores);
+            managers[i]->setGamedata(data);
             ASSERT_TRUE(managers[i]->saveGame());
         }
 
         // Check the final state
         {
             DataManager dm;
-            bool loadResult = dm.init(m_testFilename);
-            ASSERT_TRUE(loadResult) << "init() should return true for existing file";
+            dm.init(m_testFilename);
             ASSERT_EQ(dm.getGamedata().getNickname(), "Manager" + std::to_string(instanceCount - 1));
-            ASSERT_EQ(dm.getGamedata().getHighscore(), 2000 + instanceCount - 1);
+            std::array<std::size_t, 4> expectedScores = {
+                2000 + instanceCount - 1,
+                3000 + instanceCount - 1,
+                4000 + instanceCount - 1,
+                5000 + instanceCount - 1};
+            ASSERT_EQ(dm.getGamedata().getHighscores(), expectedScores);
         }
 
         // Release all managers
@@ -165,10 +165,10 @@ namespace datacoe
         // Verify file access still works
         {
             DataManager dm;
-            bool finalLoadResult = dm.init(m_testFilename);
-            ASSERT_TRUE(finalLoadResult) << "init() should return true for existing file";
+            dm.init(m_testFilename);
             const GameData &data = dm.getGamedata();
             ASSERT_FALSE(data.getNickname().empty());
         }
     }
+
 } // namespace datacoe

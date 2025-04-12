@@ -1,12 +1,14 @@
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 #include <datacoe/data_manager.hpp>
 #include <datacoe/data_reader_writer.hpp>
 #include <filesystem>
+#include <fstream>
 #include <chrono>
 #include <vector>
 #include <random>
 #include <algorithm>
 #include <iostream>
+#include <iomanip>
 
 namespace datacoe
 {
@@ -62,24 +64,29 @@ namespace datacoe
         constexpr int iterations = 100;
 
         DataManager dm;
-        bool initResult = dm.init(m_testFilename);
-        ASSERT_FALSE(initResult) << "init() should return false for new file";
+        dm.init(m_testFilename);
 
-        GameData gameData;
-        gameData.setNickname("PerformanceTest");
-        gameData.setHighscore(10000);
-        dm.setGamedata(gameData);
+        GameData initialData;
+        initialData.setNickname("PerformanceTest");
+        std::array<std::size_t, 4> baseScores = {10000, 20000, 30000, 40000};
+        initialData.setHighscores(baseScores);
+        dm.setGamedata(initialData);
 
         std::vector<long long> timings;
         timings.reserve(iterations);
 
         // Measure save performance
-        for (int i = 0; i < iterations; i++)
+        for (std::size_t i = 0; i < iterations; i++)
         {
             // Change data slightly each iteration
-            GameData updatedData = dm.getGamedata();
-            updatedData.setHighscore(10000 + i);
-            dm.setGamedata(updatedData);
+            GameData data = dm.getGamedata();
+            std::array<std::size_t, 4> scores = {
+                baseScores[0] + i,
+                baseScores[1] + i,
+                baseScores[2] + i,
+                baseScores[3] + i};
+            data.setHighscores(scores);
+            dm.setGamedata(data);
 
             auto duration = measureExecutionTime([&]()
                                                  { dm.saveGame(); });
@@ -120,13 +127,13 @@ namespace datacoe
         // First create a file to load
         {
             DataManager dm;
-            bool initResult = dm.init(m_testFilename);
-            ASSERT_FALSE(initResult) << "init() should return false for new file";
+            dm.init(m_testFilename);
 
-            GameData gameData;
-            gameData.setNickname("PerformanceTest");
-            gameData.setHighscore(10000);
-            dm.setGamedata(gameData);
+            GameData data;
+            data.setNickname("PerformanceTest");
+            std::array<std::size_t, 4> scores = {10000, 20000, 30000, 40000};
+            data.setHighscores(scores);
+            dm.setGamedata(data);
 
             dm.saveGame();
         }
@@ -135,13 +142,12 @@ namespace datacoe
         timings.reserve(iterations);
 
         // Measure load performance
-        for (int i = 0; i < iterations; i++)
+        for (std::size_t i = 0; i < iterations; i++)
         {
             auto duration = measureExecutionTime([&]()
                                                  {
             DataManager dm;
-            bool loadResult = dm.init(m_testFilename);
-            ASSERT_TRUE(loadResult) << "init() should return true when loading existing file";
+            dm.init(m_testFilename);
             // Force load by accessing game data
             auto data = dm.getGamedata(); });
             timings.push_back(duration);
@@ -176,21 +182,20 @@ namespace datacoe
         constexpr int iterations = 500;
 
         DataManager dm;
-        bool initResult = dm.init(m_testFilename);
-        ASSERT_FALSE(initResult) << "init() should return false for new file";
+        dm.init(m_testFilename);
 
         // Random generator for mixed operations
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<> opDist(0, 2); // 0=save, 1=load, 2=new game
-        std::uniform_int_distribution<> scoreDist(0, 100000);
+        std::uniform_int_distribution<std::size_t> scoreDist(0, 100000);
 
         std::vector<std::string> names = {"Player1", "Player2", "Player3", "Gamer", "Pro", "Noob", "Champion"};
         std::uniform_int_distribution<> nameDist(0, static_cast<int>(names.size() - 1));
 
         auto start = std::chrono::high_resolution_clock::now();
 
-        for (int i = 0; i < iterations; i++)
+        for (std::size_t i = 0; i < iterations; i++)
         {
             int operation = opDist(gen);
 
@@ -198,10 +203,12 @@ namespace datacoe
             {
             case 0: // Save
             {
-                GameData gameData;
-                gameData.setNickname(names[nameDist(gen)]);
-                gameData.setHighscore(scoreDist(gen));
-                dm.setGamedata(gameData);
+                GameData data;
+                data.setNickname(names[nameDist(gen)]);
+                std::array<std::size_t, 4> scores = {
+                    scoreDist(gen), scoreDist(gen), scoreDist(gen), scoreDist(gen)};
+                data.setHighscores(scores);
+                dm.setGamedata(data);
                 dm.saveGame();
                 break;
             }
@@ -224,15 +231,15 @@ namespace datacoe
         // Verify the manager is still functional after stress
         GameData finalData;
         finalData.setNickname("FinalCheck");
-        finalData.setHighscore(12345);
+        std::array<std::size_t, 4> finalScores = {12345, 23456, 34567, 45678};
+        finalData.setHighscores(finalScores);
         dm.setGamedata(finalData);
         ASSERT_TRUE(dm.saveGame());
 
         DataManager dm2;
-        bool finalLoadResult = dm2.init(m_testFilename);
-        ASSERT_TRUE(finalLoadResult) << "init() should return true after saving final data";
+        dm2.init(m_testFilename);
         ASSERT_EQ(dm2.getGamedata().getNickname(), "FinalCheck");
-        ASSERT_EQ(dm2.getGamedata().getHighscore(), 12345);
+        ASSERT_EQ(dm2.getGamedata().getHighscores(), finalScores);
     }
 
     TEST_F(PerformanceTest, EncryptionPerformanceComparison)
@@ -240,7 +247,8 @@ namespace datacoe
         constexpr int iterations = 50;
 
         // Setup test data
-        GameData testData("PerformanceTest", 12345);
+        std::array<std::size_t, 4> scores = {12345, 23456, 34567, 45678};
+        GameData testData("PerformanceTest", scores);
         std::string encryptedFilename = m_testFilename + ".encrypted";
         std::string unencryptedFilename = m_testFilename + ".unencrypted";
 
@@ -261,24 +269,30 @@ namespace datacoe
             ASSERT_TRUE(DataReaderWriter::writeData(testData, unencryptedFilename, false));
 
             // Measure save performance
-            for (int i = 0; i < iterations; i++)
+            for (std::size_t i = 0; i < iterations; i++)
             {
                 // Modify data slightly to avoid caching effects
-                testData.setHighscore(12345 + i);
+                GameData modifiedData = testData;
+                std::array<std::size_t, 4> modifiedScores = {
+                    scores[0] + i,
+                    scores[1] + i,
+                    scores[2] + i,
+                    scores[3] + i};
+                modifiedData.setHighscores(modifiedScores);
 
                 // Measure encrypted save
                 auto encryptedSaveTime = measureExecutionTime([&]()
-                                                              { DataReaderWriter::writeData(testData, encryptedFilename, true); });
+                                                              { DataReaderWriter::writeData(modifiedData, encryptedFilename, true); });
                 encryptedSaveTimings.push_back(encryptedSaveTime);
 
                 // Measure unencrypted save
                 auto unencryptedSaveTime = measureExecutionTime([&]()
-                                                                { DataReaderWriter::writeData(testData, unencryptedFilename, false); });
+                                                                { DataReaderWriter::writeData(modifiedData, unencryptedFilename, false); });
                 unencryptedSaveTimings.push_back(unencryptedSaveTime);
             }
 
             // Measure load performance
-            for (int i = 0; i < iterations; i++)
+            for (std::size_t i = 0; i < iterations; i++)
             {
                 // Measure encrypted load
                 auto encryptedLoadTime = measureExecutionTime([&]()

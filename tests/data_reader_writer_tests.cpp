@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
-#include <datacoe/data_reader_writer.hpp>
+#include "gtest/gtest.h"
+#include "datacoe/data_reader_writer.hpp"
 #include <filesystem>
 #include <fstream>
 #include <thread>
@@ -36,7 +36,7 @@ namespace datacoe
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             // Try to clean up the test file
-            for (int i = 0; i < 5; i++)
+            for (std::size_t i = 0; i < 5; i++)
             {
                 try
                 {
@@ -60,7 +60,8 @@ namespace datacoe
         try
         {
             // Create test data
-            GameData gd("TestData", 200);
+            std::array<std::size_t, 4> scores = {200, 300, 400, 500};
+            GameData gd("TestData", scores);
 
             // Write data to file
             bool writeResult = DataReaderWriter::writeData(gd, m_testFilename);
@@ -75,7 +76,7 @@ namespace datacoe
 
             // Verify data
             ASSERT_EQ(loadedData.value().getNickname(), "TestData");
-            ASSERT_EQ(loadedData.value().getHighscore(), 200);
+            ASSERT_EQ(loadedData.value().getHighscores(), scores);
         }
         catch (const std::exception &e)
         {
@@ -88,7 +89,8 @@ namespace datacoe
         try
         {
             // Test with special characters in the nickname
-            GameData gd("Test@Data#$%^&*", 300);
+            std::array<std::size_t, 4> scores = {300, 400, 500, 600};
+            GameData gd("Test@Data#$%^&*", scores);
 
             ASSERT_TRUE(DataReaderWriter::writeData(gd, m_testFilename));
 
@@ -96,7 +98,7 @@ namespace datacoe
             ASSERT_TRUE(loadedData.has_value());
 
             ASSERT_EQ(loadedData.value().getNickname(), "Test@Data#$%^&*");
-            ASSERT_EQ(loadedData.value().getHighscore(), 300);
+            ASSERT_EQ(loadedData.value().getHighscores(), scores);
         }
         catch (const std::exception &e)
         {
@@ -112,7 +114,8 @@ namespace datacoe
 
     TEST_F(DataReaderWriterTest, WriteFailInvalidPath)
     {
-        GameData gd("TestData", 400);
+        std::array<std::size_t, 4> scores = {400, 500, 600, 700};
+        GameData gd("TestData", scores);
         bool result = DataReaderWriter::writeData(gd, "/invalid/path/file.json");
         ASSERT_FALSE(result) << "Expected failure on invalid file path";
     }
@@ -138,7 +141,8 @@ namespace datacoe
         try
         {
             // Create test data
-            GameData originalData("AutoDetectTest", 300);
+            std::array<std::size_t, 4> originalScores = {300, 400, 500, 600};
+            GameData originalData("AutoDetectTest", originalScores);
 
             // Write with encryption
             bool writeEncryptedResult = DataReaderWriter::writeData(originalData, m_testFilename, true);
@@ -153,7 +157,7 @@ namespace datacoe
 
             // Verify data was read correctly
             ASSERT_EQ(loadedEncrypted.value().getNickname(), "AutoDetectTest");
-            ASSERT_EQ(loadedEncrypted.value().getHighscore(), 300);
+            ASSERT_EQ(loadedEncrypted.value().getHighscores(), originalScores);
 
             // Now write the same data unencrypted to a new file
             bool writeUnencryptedResult = DataReaderWriter::writeData(originalData, unencryptedFilename, false);
@@ -167,7 +171,7 @@ namespace datacoe
 
             // Verify data was read correctly
             ASSERT_EQ(loadedUnencrypted.value().getNickname(), "AutoDetectTest");
-            ASSERT_EQ(loadedUnencrypted.value().getHighscore(), 300);
+            ASSERT_EQ(loadedUnencrypted.value().getHighscores(), originalScores);
         }
         catch (const std::exception &e)
         {
@@ -206,7 +210,8 @@ namespace datacoe
         try
         {
             // Create test data
-            GameData testData("EncryptionDetectionTest", 400);
+            std::array<std::size_t, 4> scores = {400, 500, 600, 700};
+            GameData testData("EncryptionDetectionTest", scores);
 
             // Write encrypted data
             ASSERT_TRUE(DataReaderWriter::writeData(testData, m_testFilename, true));
@@ -262,7 +267,8 @@ namespace datacoe
         try
         {
             // Create and write encrypted data
-            GameData originalData("EncryptedData", 500);
+            std::array<std::size_t, 4> scores = {500, 600, 700, 800};
+            GameData originalData("EncryptedData", scores);
             ASSERT_TRUE(DataReaderWriter::writeData(originalData, m_testFilename, true));
 
             // Try to read without decryption
@@ -272,7 +278,7 @@ namespace datacoe
 
             // Verify data
             ASSERT_EQ(loadedData.value().getNickname(), "EncryptedData");
-            ASSERT_EQ(loadedData.value().getHighscore(), 500);
+            ASSERT_EQ(loadedData.value().getHighscores(), scores);
         }
         catch (const std::exception &e)
         {
@@ -285,7 +291,8 @@ namespace datacoe
         try
         {
             // Create and write unencrypted data
-            GameData originalData("UnencryptedData", 600);
+            std::array<std::size_t, 4> scores = {600, 700, 800, 900};
+            GameData originalData("UnencryptedData", scores);
             ASSERT_TRUE(DataReaderWriter::writeData(originalData, m_testFilename, false));
 
             // Try to read with decryption
@@ -295,7 +302,7 @@ namespace datacoe
 
             // Verify data
             ASSERT_EQ(loadedData.value().getNickname(), "UnencryptedData");
-            ASSERT_EQ(loadedData.value().getHighscore(), 600);
+            ASSERT_EQ(loadedData.value().getHighscores(), scores);
         }
         catch (const std::exception &e)
         {

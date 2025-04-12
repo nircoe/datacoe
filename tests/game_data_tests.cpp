@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
-#include <datacoe/game_data.hpp>
+#include "gtest/gtest.h"
+#include "datacoe/game_data.hpp"
+#include <iostream>
 
 namespace datacoe
 {
@@ -7,14 +8,16 @@ namespace datacoe
     {
         GameData gd;
         ASSERT_EQ(gd.getNickname(), "");
-        ASSERT_EQ(gd.getHighscore(), 0);
+        std::array<std::size_t, 4> expectedScores = {0, 0, 0, 0};
+        ASSERT_EQ(gd.getHighscores(), expectedScores);
     }
 
     TEST(GameDataTest, ParameterizedConstructor)
     {
-        GameData gd("Player1", 500);
+        std::array<std::size_t, 4> scores = {100, 200, 300, 400};
+        GameData gd("Player1", scores);
         ASSERT_EQ(gd.getNickname(), "Player1");
-        ASSERT_EQ(gd.getHighscore(), 500);
+        ASSERT_EQ(gd.getHighscores(), scores);
     }
 
     TEST(GameDataTest, SetAndGetNickname)
@@ -32,94 +35,101 @@ namespace datacoe
         ASSERT_EQ(gd.getNickname(), "");
     }
 
-    TEST(GameDataTest, SetAndGetHighscore)
+    TEST(GameDataTest, SetAndGetHighscores)
     {
         GameData gd;
-        gd.setHighscore(300);
-        ASSERT_EQ(gd.getHighscore(), 300);
+        std::array<std::size_t, 4> scores = {300, 400, 500, 600};
+        gd.setHighscores(scores);
+        ASSERT_EQ(gd.getHighscores(), scores);
 
-        // Test changing highscore
-        gd.setHighscore(400);
-        ASSERT_EQ(gd.getHighscore(), 400);
+        // Test changing highscores
+        std::array<std::size_t, 4> newScores = {400, 500, 600, 700};
+        gd.setHighscores(newScores);
+        ASSERT_EQ(gd.getHighscores(), newScores);
 
-        // Test zero highscore
-        gd.setHighscore(0);
-        ASSERT_EQ(gd.getHighscore(), 0);
-
-        // Test negative highscore (if allowed by your game's rules)
-        gd.setHighscore(-10);
-        ASSERT_EQ(gd.getHighscore(), -10);
+        // Test zero highscores
+        std::array<std::size_t, 4> zeroScores = {0, 0, 0, 0};
+        gd.setHighscores(zeroScores);
+        ASSERT_EQ(gd.getHighscores(), zeroScores);
     }
 
     TEST(GameDataTest, ToJsonBasic)
     {
-        GameData gd("JsonTest", 400);
+        std::array<std::size_t, 4> scores = {100, 200, 300, 400};
+        GameData gd("JsonTest", scores);
         json j = gd.toJson();
 
         ASSERT_TRUE(j.is_object());
         ASSERT_TRUE(j.contains("nickname"));
-        ASSERT_TRUE(j.contains("highscore"));
+        ASSERT_TRUE(j.contains("highscores"));
         ASSERT_EQ(j["nickname"], "JsonTest");
-        ASSERT_EQ(j["highscore"], 400);
+
+        auto highscores = j["highscores"].get<std::array<std::size_t, 4>>();
+        ASSERT_EQ(highscores, scores);
     }
 
     TEST(GameDataTest, ToJsonEmptyNickname)
     {
-        GameData gd("", 100);
+        std::array<std::size_t, 4> scores = {100, 200, 300, 400};
+        GameData gd("", scores);
         json j = gd.toJson();
 
         ASSERT_EQ(j["nickname"], "");
-        ASSERT_EQ(j["highscore"], 100);
+        auto highscores = j["highscores"].get<std::array<std::size_t, 4>>();
+        ASSERT_EQ(highscores, scores);
     }
 
     TEST(GameDataTest, FromJsonBasic)
     {
         json j;
         j["nickname"] = "JsonTest";
-        j["highscore"] = 400;
+        j["highscores"] = {100, 200, 300, 400};
 
         GameData gd = GameData::fromJson(j);
 
         ASSERT_EQ(gd.getNickname(), "JsonTest");
-        ASSERT_EQ(gd.getHighscore(), 400);
+        std::array<std::size_t, 4> expectedScores = {100, 200, 300, 400};
+        ASSERT_EQ(gd.getHighscores(), expectedScores);
     }
 
     TEST(GameDataTest, FromJsonEmptyNickname)
     {
         json j;
         j["nickname"] = "";
-        j["highscore"] = 400;
+        j["highscores"] = {100, 200, 300, 400};
 
         GameData gd = GameData::fromJson(j);
 
         ASSERT_EQ(gd.getNickname(), "");
-        ASSERT_EQ(gd.getHighscore(), 400);
+        std::array<std::size_t, 4> expectedScores = {100, 200, 300, 400};
+        ASSERT_EQ(gd.getHighscores(), expectedScores);
     }
 
     TEST(GameDataTest, ToAndFromJsonRoundTrip)
     {
-        GameData original("RoundTrip", 550);
+        std::array<std::size_t, 4> scores = {150, 250, 350, 450};
+        GameData original("RoundTrip", scores);
         json j = original.toJson();
         GameData restored = GameData::fromJson(j);
 
         ASSERT_EQ(restored.getNickname(), original.getNickname());
-        ASSERT_EQ(restored.getHighscore(), original.getHighscore());
+        ASSERT_EQ(restored.getHighscores(), original.getHighscores());
     }
 
     TEST(GameDataTest, FromJsonMissingNickname)
     {
         json j;
         // Missing nickname field
-        j["highscore"] = 400;
+        j["highscores"] = {100, 200, 300, 400};
 
         ASSERT_THROW(GameData::fromJson(j), std::runtime_error);
     }
 
-    TEST(GameDataTest, FromJsonMissingHighscore)
+    TEST(GameDataTest, FromJsonMissingHighscores)
     {
         json j;
         j["nickname"] = "TestName";
-        // Missing highscore field
+        // Missing highscores field
 
         ASSERT_THROW(GameData::fromJson(j), std::runtime_error);
     }
@@ -128,13 +138,28 @@ namespace datacoe
     {
         json j1;
         j1["nickname"] = 12345; // Number instead of string
-        j1["highscore"] = 400;
+        j1["highscores"] = {100, 200, 300, 400};
 
         ASSERT_THROW(GameData::fromJson(j1), std::runtime_error);
 
         json j2;
         j2["nickname"] = "TestName";
-        j2["highscore"] = "400"; // String instead of number
+        j2["highscores"] = "Not an array"; // String instead of array
+
+        ASSERT_THROW(GameData::fromJson(j2), std::runtime_error);
+    }
+
+    TEST(GameDataTest, FromJsonWrongArraySize)
+    {
+        json j;
+        j["nickname"] = "TestName";
+        j["highscores"] = {100, 200, 300}; // Only 3 elements instead of 4
+
+        ASSERT_THROW(GameData::fromJson(j), std::runtime_error);
+
+        json j2;
+        j2["nickname"] = "TestName";
+        j2["highscores"] = {100, 200, 300, 400, 500}; // 5 elements instead of 4
 
         ASSERT_THROW(GameData::fromJson(j2), std::runtime_error);
     }
@@ -143,75 +168,82 @@ namespace datacoe
     {
         json j;
         j["nickname"] = "TestName";
-        j["highscore"] = 400;
+        j["highscores"] = {100, 200, 300, 400};
         j["extraField"] = "This should be ignored";
 
         // Extra fields should be ignored
         GameData gd = GameData::fromJson(j);
 
         ASSERT_EQ(gd.getNickname(), "TestName");
-        ASSERT_EQ(gd.getHighscore(), 400);
+        std::array<std::size_t, 4> expectedScores = {100, 200, 300, 400};
+        ASSERT_EQ(gd.getHighscores(), expectedScores);
     }
 
     TEST(GameDataTest, FromJsonSpecialCharacters)
     {
         json j;
         j["nickname"] = "Test@#$%^&*()";
-        j["highscore"] = 400;
+        j["highscores"] = {100, 200, 300, 400};
 
         GameData gd = GameData::fromJson(j);
 
         ASSERT_EQ(gd.getNickname(), "Test@#$%^&*()");
-        ASSERT_EQ(gd.getHighscore(), 400);
+        std::array<std::size_t, 4> expectedScores = {100, 200, 300, 400};
+        ASSERT_EQ(gd.getHighscores(), expectedScores);
     }
 
     TEST(GameDataTest, FromJsonLargeValues)
     {
         json j;
         j["nickname"] = "TestName";
-        j["highscore"] = 2147483647; // Max int value
+        j["highscores"] = {9999999, 9999999, 9999999, 9999999}; // Large values
 
         GameData gd = GameData::fromJson(j);
 
-        ASSERT_EQ(gd.getHighscore(), 2147483647);
+        std::array<std::size_t, 4> expectedScores = {9999999, 9999999, 9999999, 9999999};
+        ASSERT_EQ(gd.getHighscores(), expectedScores);
     }
 
     TEST(GameDataTest, CopyConstructor)
     {
-        GameData original("Original", 100);
+        std::array<std::size_t, 4> scores = {100, 200, 300, 400};
+        GameData original("Original", scores);
         GameData copy = original;
 
         ASSERT_EQ(copy.getNickname(), "Original");
-        ASSERT_EQ(copy.getHighscore(), 100);
+        ASSERT_EQ(copy.getHighscores(), scores);
 
         // Modifying copy shouldn't affect original
         copy.setNickname("Modified");
-        copy.setHighscore(200);
+        std::array<std::size_t, 4> newScores = {500, 600, 700, 800};
+        copy.setHighscores(newScores);
 
         ASSERT_EQ(original.getNickname(), "Original");
-        ASSERT_EQ(original.getHighscore(), 100);
+        ASSERT_EQ(original.getHighscores(), scores);
         ASSERT_EQ(copy.getNickname(), "Modified");
-        ASSERT_EQ(copy.getHighscore(), 200);
+        ASSERT_EQ(copy.getHighscores(), newScores);
     }
 
     TEST(GameDataTest, AssignmentOperator)
     {
-        GameData original("Original", 100);
+        std::array<std::size_t, 4> scores = {100, 200, 300, 400};
+        GameData original("Original", scores);
         GameData assigned;
 
         assigned = original;
 
         ASSERT_EQ(assigned.getNickname(), "Original");
-        ASSERT_EQ(assigned.getHighscore(), 100);
+        ASSERT_EQ(assigned.getHighscores(), scores);
 
         // Modifying assigned shouldn't affect original
         assigned.setNickname("Modified");
-        assigned.setHighscore(200);
+        std::array<std::size_t, 4> newScores = {500, 600, 700, 800};
+        assigned.setHighscores(newScores);
 
         ASSERT_EQ(original.getNickname(), "Original");
-        ASSERT_EQ(original.getHighscore(), 100);
+        ASSERT_EQ(original.getHighscores(), scores);
         ASSERT_EQ(assigned.getNickname(), "Modified");
-        ASSERT_EQ(assigned.getHighscore(), 200);
+        ASSERT_EQ(assigned.getHighscores(), newScores);
     }
 
 } // namespace datacoe
