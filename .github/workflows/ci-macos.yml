@@ -2,9 +2,9 @@ name: macOS
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'game/*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, 'game/*' ]
 
 jobs:
   build-and-test:

@@ -1,7 +1,8 @@
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 #include <datacoe/data_manager.hpp>
 #include <datacoe/data_reader_writer.hpp>
 #include <filesystem>
+#include <fstream>
 #include <thread>
 #include <chrono>
 #include <iostream>
@@ -36,7 +37,7 @@ namespace datacoe
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             // Try to clean up the test file
-            for (int i = 0; i < 5; i++)
+            for (std::size_t i = 0; i < 5; i++)
             {
                 try
                 {
@@ -59,28 +60,28 @@ namespace datacoe
     {
         try
         {
+            // Create GameData and set in DataManager
             DataManager dm;
-            bool initResult = dm.init(m_testFilename);
-            ASSERT_FALSE(initResult) << "init() should return false for new file";
+            dm.init(m_testFilename);
 
-            // Create a GameData object and set it in the DataManager
-            GameData gameData;
-            gameData.setNickname("TestUser");
-            gameData.setHighscore(100);
-            dm.setGamedata(gameData);
+            // Create and set GameData
+            GameData data;
+            data.setNickname("TestUser");
+            std::array<std::size_t, 4> scores = {100, 200, 300, 400};
+            data.setHighscores(scores);
+            dm.setGamedata(data);
 
             ASSERT_TRUE(dm.saveGame()) << "Failed to save game";
             ASSERT_TRUE(std::filesystem::exists(m_testFilename)) << "Save file not created";
 
             // Create a new DataManager to load the saved data
             DataManager dm2;
-            bool loadResult = dm2.init(m_testFilename);
-            ASSERT_TRUE(loadResult) << "init() should return true when loading existing file";
+            dm2.init(m_testFilename);
 
             const GameData &loadedData = dm2.getGamedata();
 
             ASSERT_EQ(loadedData.getNickname(), "TestUser");
-            ASSERT_EQ(loadedData.getHighscore(), 100);
+            ASSERT_EQ(loadedData.getHighscores(), scores);
         }
         catch (const std::exception &e)
         {
@@ -93,32 +94,32 @@ namespace datacoe
         try
         {
             DataManager dm;
-            bool initialInit = dm.init(m_testFilename);
-            ASSERT_FALSE(initialInit) << "init() should return false for new file";
+            dm.init(m_testFilename);
 
             // Set initial data and save
-            GameData gameData;
-            gameData.setNickname("TestUser");
-            gameData.setHighscore(100);
-            dm.setGamedata(gameData);
+            GameData data;
+            data.setNickname("TestUser");
+            std::array<std::size_t, 4> initialScores = {100, 200, 300, 400};
+            data.setHighscores(initialScores);
+            dm.setGamedata(data);
             ASSERT_TRUE(dm.saveGame());
 
-            // Update high score and save again
-            GameData updatedData = dm.getGamedata(); // Get the current data
-            updatedData.setHighscore(200);           // Update the score
-            dm.setGamedata(updatedData);             // Set the updated data
+            // Update high scores and save again
+            GameData updatedData = dm.getGamedata();
+            std::array<std::size_t, 4> updatedScores = {500, 600, 700, 800};
+            updatedData.setHighscores(updatedScores);
+            dm.setGamedata(updatedData);
             ASSERT_TRUE(dm.saveGame());
 
             // Load in a new manager
             DataManager dm2;
-            bool loadResult = dm2.init(m_testFilename);
-            ASSERT_TRUE(loadResult) << "init() should return true when loading existing file";
+            dm2.init(m_testFilename);
 
             const GameData &loadedData = dm2.getGamedata();
 
-            // Check the updated score was saved
+            // Check the updated scores were saved
             ASSERT_EQ(loadedData.getNickname(), "TestUser");
-            ASSERT_EQ(loadedData.getHighscore(), 200);
+            ASSERT_EQ(loadedData.getHighscores(), updatedScores);
         }
         catch (const std::exception &e)
         {
@@ -131,14 +132,14 @@ namespace datacoe
         try
         {
             DataManager dm;
-            bool initResult = dm.init(m_testFilename);
-            ASSERT_FALSE(initResult) << "init() should return false for new file";
+            dm.init(m_testFilename);
 
-            // Create initial data
-            GameData gameData;
-            gameData.setNickname("TestUser");
-            gameData.setHighscore(100);
-            dm.setGamedata(gameData);
+            // Set initial data
+            GameData data;
+            data.setNickname("TestUser");
+            std::array<std::size_t, 4> scores = {100, 200, 300, 400};
+            data.setHighscores(scores);
+            dm.setGamedata(data);
             dm.saveGame();
 
             // Create a new game
@@ -148,16 +149,16 @@ namespace datacoe
 
             // Check reset to default values
             ASSERT_EQ(newData.getNickname(), "");
-            ASSERT_EQ(newData.getHighscore(), 0);
+            std::array<std::size_t, 4> expectedScores = {0, 0, 0, 0};
+            ASSERT_EQ(newData.getHighscores(), expectedScores);
 
             // Check that original saved data still exists on disk
             DataManager dm2;
-            bool loadResult = dm2.init(m_testFilename);
-            ASSERT_TRUE(loadResult) << "init() should return true when loading existing file";
+            dm2.init(m_testFilename);
 
             const GameData &loadedData = dm2.getGamedata();
             ASSERT_EQ(loadedData.getNickname(), "TestUser");
-            ASSERT_EQ(loadedData.getHighscore(), 100);
+            ASSERT_EQ(loadedData.getHighscores(), scores);
         }
         catch (const std::exception &e)
         {
@@ -170,15 +171,13 @@ namespace datacoe
         try
         {
             DataManager dm;
-            bool initResult = dm.init("non_existent_file.json"); // Test loading a non-existent file
-
-            // Should return false for non-existent file
-            ASSERT_FALSE(initResult) << "init() should return false for non-existent file";
+            dm.init("non_existent_file.json"); // Test loading a non-existent file
 
             // Should initialize with default empty values
             const GameData &newData = dm.getGamedata();
             ASSERT_EQ(newData.getNickname(), "");
-            ASSERT_EQ(newData.getHighscore(), 0);
+            std::array<std::size_t, 4> expectedScores = {0, 0, 0, 0};
+            ASSERT_EQ(newData.getHighscores(), expectedScores);
         }
         catch (const std::exception &e)
         {
@@ -191,14 +190,14 @@ namespace datacoe
         try
         {
             DataManager dm;
-            bool initResult = dm.init(m_testFilename);
-            ASSERT_FALSE(initResult) << "init() should return false for new file";
+            dm.init(m_testFilename);
 
-            // Empty nickname represents guest mode
-            GameData gameData;
-            gameData.setNickname(""); // Empty nickname for guest mode
-            gameData.setHighscore(500);
-            dm.setGamedata(gameData);
+            // Set empty nickname for guest mode
+            GameData data;
+            data.setNickname(""); // Empty nickname represents guest mode
+            std::array<std::size_t, 4> scores = {500, 600, 700, 800};
+            data.setHighscores(scores);
+            dm.setGamedata(data);
 
             // Should return true but not create a file
             ASSERT_TRUE(dm.saveGame());
@@ -210,44 +209,44 @@ namespace datacoe
         }
     }
 
-    TEST_F(DataManagerTest, HighScoreUpdating)
+    TEST_F(DataManagerTest, HighscoreUpdating)
     {
         try
         {
             DataManager dm;
-            bool initResult = dm.init(m_testFilename);
-            ASSERT_FALSE(initResult) << "init() should return false for new file";
+            dm.init(m_testFilename);
 
             // Set initial data
-            GameData gameData;
-            gameData.setNickname("Player1");
-            gameData.setHighscore(100);
-            dm.setGamedata(gameData);
+            GameData initialData;
+            initialData.setNickname("Player1");
+            std::array<std::size_t, 4> initialScores = {100, 200, 300, 400};
+            initialData.setHighscores(initialScores);
+            dm.setGamedata(initialData);
             dm.saveGame();
 
-            // Set a lower score
-            GameData updatedData = dm.getGamedata();
-            updatedData.setHighscore(50);
-            dm.setGamedata(updatedData);
+            // Set lower scores
+            GameData lowerData = dm.getGamedata();
+            std::array<std::size_t, 4> lowerScores = {50, 150, 250, 350};
+            lowerData.setHighscores(lowerScores);
+            dm.setGamedata(lowerData);
             dm.saveGame();
 
-            // Load data and verify the lower score was saved
+            // Load data and verify the lower scores were saved
             DataManager dm2;
-            bool loadResult1 = dm2.init(m_testFilename);
-            ASSERT_TRUE(loadResult1) << "init() should return true when loading existing file";
-            ASSERT_EQ(dm2.getGamedata().getHighscore(), 50);
+            dm2.init(m_testFilename);
+            ASSERT_EQ(dm2.getGamedata().getHighscores(), lowerScores);
 
-            // Set a higher score
-            GameData newData = dm2.getGamedata();
-            newData.setHighscore(200);
-            dm2.setGamedata(newData);
+            // Set higher scores
+            GameData higherData = dm2.getGamedata();
+            std::array<std::size_t, 4> higherScores = {200, 300, 400, 500};
+            higherData.setHighscores(higherScores);
+            dm2.setGamedata(higherData);
             dm2.saveGame();
 
             // Load again and verify
             DataManager dm3;
-            bool loadResult2 = dm3.init(m_testFilename);
-            ASSERT_TRUE(loadResult2) << "init() should return true when loading existing file";
-            ASSERT_EQ(dm3.getGamedata().getHighscore(), 200);
+            dm3.init(m_testFilename);
+            ASSERT_EQ(dm3.getGamedata().getHighscores(), higherScores);
         }
         catch (const std::exception &e)
         {
@@ -262,13 +261,14 @@ namespace datacoe
             // Create an unencrypted save file
             {
                 DataManager dm;
-                bool initResult = dm.init(m_testFilename, false); // Unencrypted
-                ASSERT_FALSE(initResult) << "init() should return false for new file";
+                dm.init(m_testFilename, false); // Unencrypted
 
-                GameData gameData;
-                gameData.setNickname("TransitionTest");
-                gameData.setHighscore(1000);
-                dm.setGamedata(gameData);
+                GameData data;
+                data.setNickname("TransitionTest");
+                std::array<std::size_t, 4> scores = {1000, 2000, 3000, 4000};
+                data.setHighscores(scores);
+                dm.setGamedata(data);
+
                 ASSERT_TRUE(dm.saveGame()) << "Failed to save unencrypted game";
 
                 // Verify it's unencrypted
@@ -278,17 +278,18 @@ namespace datacoe
             // Load the file with encryption turned on
             {
                 DataManager dm;
-                bool loadResult = dm.init(m_testFilename, true); // Encrypted mode
-                ASSERT_TRUE(loadResult) << "init() should return true when loading existing file";
+                dm.init(m_testFilename, true); // Encrypted mode
 
                 // Should still load successfully due to auto-detection
                 const GameData &data = dm.getGamedata();
                 ASSERT_EQ(data.getNickname(), "TransitionTest");
-                ASSERT_EQ(data.getHighscore(), 1000);
+                std::array<std::size_t, 4> expectedScores = {1000, 2000, 3000, 4000};
+                ASSERT_EQ(data.getHighscores(), expectedScores);
 
                 // Modify data
-                GameData updatedData = dm.getGamedata();
-                updatedData.setHighscore(2000);
+                GameData updatedData = data;
+                std::array<std::size_t, 4> updatedScores = {2000, 3000, 4000, 5000};
+                updatedData.setHighscores(updatedScores);
                 dm.setGamedata(updatedData);
 
                 // Save with encryption turned on
@@ -301,13 +302,13 @@ namespace datacoe
             // Load the now-encrypted file with encryption turned off
             {
                 DataManager dm;
-                bool loadResult = dm.init(m_testFilename, false); // Unencrypted mode
-                ASSERT_TRUE(loadResult) << "init() should return true when loading existing file (with auto-detection)";
+                dm.init(m_testFilename, false); // Unencrypted mode
 
                 // Should still load successfully due to auto-detection
                 const GameData &data = dm.getGamedata();
                 ASSERT_EQ(data.getNickname(), "TransitionTest");
-                ASSERT_EQ(data.getHighscore(), 2000);
+                std::array<std::size_t, 4> expectedScores = {2000, 3000, 4000, 5000};
+                ASSERT_EQ(data.getHighscores(), expectedScores);
             }
         }
         catch (const std::exception &e)
@@ -324,10 +325,13 @@ namespace datacoe
             {
                 DataManager dm;
                 dm.init(m_testFilename, false); // Unencrypted
-                GameData gameData;
-                gameData.setNickname("EncryptionChangeTest");
-                gameData.setHighscore(100);
-                dm.setGamedata(gameData);
+
+                GameData data;
+                data.setNickname("EncryptionChangeTest");
+                std::array<std::size_t, 4> scores = {100, 200, 300, 400};
+                data.setHighscores(scores);
+                dm.setGamedata(data);
+
                 ASSERT_TRUE(dm.saveGame()) << "Failed to save unencrypted game";
 
                 // Verify it's unencrypted
@@ -338,7 +342,8 @@ namespace datacoe
 
                 // Update data
                 GameData updatedData = dm.getGamedata();
-                updatedData.setHighscore(200);
+                std::array<std::size_t, 4> updatedScores = {200, 300, 400, 500};
+                updatedData.setHighscores(updatedScores);
                 dm.setGamedata(updatedData);
 
                 // Save with new encryption setting
@@ -356,7 +361,8 @@ namespace datacoe
                 // Should load successfully
                 const GameData &data = dm.getGamedata();
                 ASSERT_EQ(data.getNickname(), "EncryptionChangeTest");
-                ASSERT_EQ(data.getHighscore(), 200);
+                std::array<std::size_t, 4> expectedScores = {200, 300, 400, 500};
+                ASSERT_EQ(data.getHighscores(), expectedScores);
             }
         }
         catch (const std::exception &e)
@@ -381,10 +387,13 @@ namespace datacoe
                 // Create and save an encrypted file
                 DataManager dm;
                 dm.init(m_testFilename, true); // Use encryption
-                GameData gameData;
-                gameData.setNickname("EncryptedTest");
-                gameData.setHighscore(100);
-                dm.setGamedata(gameData);
+
+                GameData data;
+                data.setNickname("EncryptedTest");
+                std::array<std::size_t, 4> scores = {100, 200, 300, 400};
+                data.setHighscores(scores);
+                dm.setGamedata(data);
+
                 ASSERT_TRUE(dm.saveGame());
 
                 // Now verify the file is encrypted and isEncrypted() returns true
@@ -400,10 +409,13 @@ namespace datacoe
                 // Create unencrypted file
                 DataManager dm;
                 dm.init(m_testFilename, false); // No encryption
-                GameData gameData;
-                gameData.setNickname("UnencryptedTest");
-                gameData.setHighscore(200);
-                dm.setGamedata(gameData);
+
+                GameData data;
+                data.setNickname("UnencryptedTest");
+                std::array<std::size_t, 4> scores = {200, 300, 400, 500};
+                data.setHighscores(scores);
+                dm.setGamedata(data);
+
                 ASSERT_TRUE(dm.saveGame());
 
                 // Now verify the file is not encrypted and isEncrypted() returns false
@@ -420,10 +432,13 @@ namespace datacoe
 
                     DataManager dm;
                     dm.init(m_testFilename, true); // Encryption on
-                    GameData gameData;
-                    gameData.setNickname("EncryptionStateTest");
-                    gameData.setHighscore(300);
-                    dm.setGamedata(gameData);
+
+                    GameData data;
+                    data.setNickname("EncryptionStateTest");
+                    std::array<std::size_t, 4> scores = {300, 400, 500, 600};
+                    data.setHighscores(scores);
+                    dm.setGamedata(data);
+
                     ASSERT_TRUE(dm.saveGame());
                 }
 
@@ -444,10 +459,13 @@ namespace datacoe
 
                     DataManager dm;
                     dm.init(m_testFilename, true); // Start with encryption
-                    GameData gameData;
-                    gameData.setNickname("ChangeEncryptionTest");
-                    gameData.setHighscore(300);
-                    dm.setGamedata(gameData);
+
+                    GameData data;
+                    data.setNickname("ChangeEncryptionTest");
+                    std::array<std::size_t, 4> scores = {300, 400, 500, 600};
+                    data.setHighscores(scores);
+                    dm.setGamedata(data);
+
                     ASSERT_TRUE(dm.saveGame());
                 }
 
@@ -461,9 +479,13 @@ namespace datacoe
 
                     // Change encryption setting and save
                     dm.setEncryption(false);
-                    GameData gameData = dm.getGamedata();
-                    gameData.setHighscore(400); // Change data
-                    dm.setGamedata(gameData);
+
+                    // Get data, update it, and set it back
+                    GameData data = dm.getGamedata();
+                    std::array<std::size_t, 4> updatedScores = {400, 500, 600, 700};
+                    data.setHighscores(updatedScores);
+                    dm.setGamedata(data);
+
                     ASSERT_TRUE(dm.saveGame()); // Save with new encryption setting
 
                     // After saving, isEncrypted should reflect the new state
