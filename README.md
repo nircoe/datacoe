@@ -7,6 +7,14 @@ It provides functionalities for data persistence, serialization, and encryption.
 [![Linux](https://github.com/nircoe/datacoe/actions/workflows/ci-linux.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-linux.yml)
 [![macOS](https://github.com/nircoe/datacoe/actions/workflows/ci-macos.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-macos.yml)
 
+## Current State - Refactoring towards a Generic Data API
+
+This README describes the current `main` branch. datacoe is being refactored towards a generic,
+templated save/load API (in the `refactor/generic_data` branch), so parts of this README will be
+stale until that refactor lands.
+
+---
+
 ## Table of Contents
 - [Overview](#overview)
 - [Features](#features)
@@ -29,7 +37,7 @@ The library offers a base implementation for data management tasks, including:
 - Reading and writing game data to files
 - Serialization and deserialization of game data using [nlohmann/json](https://github.com/nlohmann/json)
 - Encryption and decryption of data using [CryptoPP](https://github.com/weidai11/cryptopp) (With the help of [CryptoPP-CMake](https://github.com/abdes/cryptopp-cmake))
-- Comprehensive test suite using [Google Test](https://github.com/google/googletest)
+- Test suite using [Google Test](https://github.com/google/googletest)
 
 [Back to top](#table-of-contents)
 
@@ -286,7 +294,7 @@ FetchContent_Declare(
 
 ## Testing
 
-The project includes a comprehensive test suite built with Google Test. Tests cover:
+The project includes a test suite built with Google Test. Tests cover:
 
 - Basic data operations
 - Error handling and recovery
@@ -406,7 +414,7 @@ Game-specific implementations will have their own tags (e.g., `worm-v1.0.0`) to 
 - JSON serialization using nlohmann/json
 - AES encryption/decryption using CryptoPP
 - Optional encryption with automatic format detection
-- Comprehensive test suite with Google Test
+- Test suite with Google Test
 - Proper installation targets and CMake configuration
 - Cross-platform support (Windows, macOS, Linux)
 
@@ -435,26 +443,26 @@ If you'd like to contribute, please:
 ## Roadmap
 
 ### Implemented Features
-- ✅ Basic file input/output operations
-- ✅ JSON serialization using nlohmann/json
-- ✅ AES encryption/decryption using CryptoPP
-- ✅ Comprehensive test suite with Google Test
-- ✅ Automated dependency management
-- ✅ Optional encryption (ability to disable encryption if not needed)
+- Basic file input/output operations
+- JSON serialization using nlohmann/json
+- AES encryption/decryption using CryptoPP
+- Test suite with Google Test
+- Automated dependency management
+- Optional encryption (ability to disable encryption if not needed)
 
 ### Planned Improvements
-- ⏳ Secure encryption key management (replacing fixed keys with secure storage and derivation)
-- ⏳ Graceful recovery from corrupted files with backup system
-- ⏳ Thread-safe operations for concurrent data access
-- ⏳ Asynchronous save/load operations
-- ⏳ Performance optimizations for large data sets
-- ⏳ Auto-save functionality with configurable intervals
-- ⏳ Save data compression
-- ⏳ Save data versioning and migration
-- ⏳ Multiple save slot system with profile management
-- ⏳ Support for additional build systems (Make, Visual Studio, Meson, etc.)
-- ⏳ Cloud save integration capabilities
-- ⏳ Save data analytics and statistics
+- Secure encryption key management (replacing fixed keys with secure storage and derivation)
+- Graceful recovery from corrupted files with backup system
+- Thread-safe operations for concurrent data access
+- Asynchronous save/load operations
+- Performance optimizations for large data sets
+- Auto-save functionality with configurable intervals
+- Save data compression
+- Save data versioning and migration
+- Multiple save slot system with profile management
+- Support for additional build systems (Make, Visual Studio, Meson, etc.)
+- Cloud save integration capabilities
+- Save data analytics and statistics
 
 [Back to top](#table-of-contents)
 
