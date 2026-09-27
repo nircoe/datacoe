@@ -18,7 +18,7 @@ add_executable(all_tests
     ${TEST_FILES}
 )
 
-set_target_properties(all_tests PROPERTIES CXX_STANDARD 17)
+set_target_properties(all_tests PROPERTIES CXX_STANDARD 23)
 
 target_include_directories(all_tests PRIVATE 
     ${GTEST_INCLUDE_DIR}
@@ -55,7 +55,7 @@ if(BUILD_INDIVIDUAL_TESTS)
         add_executable(${test_name} ${test_file})
         
         # Set properties and include directories
-        set_target_properties(${test_name} PROPERTIES CXX_STANDARD 17)
+        set_target_properties(${test_name} PROPERTIES CXX_STANDARD 23)
         target_include_directories(${test_name} PRIVATE 
             ${GTEST_INCLUDE_DIR}
             ${GMOCK_INCLUDE_DIR}
