@@ -4,12 +4,14 @@ on:
   push:
     branches: [ main ]
   pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
     branches: [ main ]
 
 jobs:
   build-and-test:
     name: ${{ matrix.name }}
     runs-on: windows-latest
+    if: github.event.pull_request.draft == false || github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
@@ -17,9 +19,13 @@ jobs:
           # Windows with MSVC
           - name: "Windows MSVC"
             compiler: msvc
-            cmake-generator: 'Visual Studio 17 2022'
-            cmake-options: ''
-            
+            cmake-generator: 'Ninja'
+            cmake-options: >-
+              -DCMAKE_BUILD_TYPE=Release
+              -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+              -DCMAKE_POLICY_DEFAULT_CMP0141=NEW
+              -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
+
           # Windows with MinGW (GCC)
           - name: "Windows MinGW"
             compiler: gcc
@@ -41,6 +47,10 @@ jobs:
           choco install mingw
         fi
       shell: bash
+
+    - name: Setup MSVC dev environment
+      if: matrix.compiler == 'msvc'
+      uses: ilammy/msvc-dev-cmd@v1.13.0
 
     - name: Configure CMake
       run: |
@@ -66,6 +76,6 @@ jobs:
             ./all_tests.exe
         else # MSVC
             echo "Running tests"
-            ./tests/Release/all_tests.exe
+            ./tests/all_tests.exe
         fi
       shell: bash
