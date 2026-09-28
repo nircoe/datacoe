@@ -91,7 +91,7 @@ The library follows a layered architecture:
 ### Prerequisites
 
 - CMake 3.14 or higher
-- C++17 compatible compiler
+- C++23 compatible compiler
 - Git
 
 ### Build Steps
@@ -363,7 +363,7 @@ Our CI pipeline automatically builds and tests the project with the following co
 - **macOS**:
   - Apple Clang
 
-Each configuration compiles the project and runs the full test suite to verify compatibility and functionality. All supported platforms use C++17 features for maximum portability.
+Each configuration compiles the project and runs the full test suite to verify compatibility and functionality. All supported platforms use C++23 features for maximum portability.
 
 Platform-specific code (such as file permissions handling) is wrapped in conditional compilation blocks to ensure proper behavior across different operating systems.
 

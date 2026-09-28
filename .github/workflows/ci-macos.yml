@@ -2,10 +2,10 @@ name: macOS
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, refactor/generic_data ]
   pull_request:
     types: [ opened, synchronize, reopened, ready_for_review ]
-    branches: [ main ]
+    branches: [ main, refactor/generic_data ]
 
 jobs:
   build-and-test:
