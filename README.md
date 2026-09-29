@@ -37,7 +37,7 @@ The library offers a base implementation for data management tasks, including:
 - Reading and writing game data to files
 - Serialization and deserialization of game data using [nlohmann/json](https://github.com/nlohmann/json)
 - Encryption and decryption of data using [CryptoPP](https://github.com/weidai11/cryptopp) (With the help of [CryptoPP-CMake](https://github.com/abdes/cryptopp-cmake))
-- Test suite using [Google Test](https://github.com/google/googletest)
+- Test suite using [Google Test](https://github.com/google/googletest), with [testcoe](https://github.com/nircoe/testcoe) adding grid visualization and crash reporting
 
 [Back to top](#table-of-contents)
 
@@ -90,7 +90,7 @@ The library follows a layered architecture:
 
 ### Prerequisites
 
-- CMake 3.14 or higher
+- CMake 3.22 or higher
 - C++23 compatible compiler
 - Git
 
@@ -249,7 +249,7 @@ All dependencies are automatically handled:
 
 - **[CryptoPP-CMake](https://github.com/abdes/cryptopp-cmake):** Added as a git submodule at external/cryptopp-cmake (Fetching and building CryptoPP) - currently on release CRYPTOPP_8_9_0
 - **[nlohmann/json](https://github.com/nlohmann/json):** Added as a git submodule at external/json - currently on release v3.11.3
-- **[Google Test](https://github.com/google/googletest):** Automatically fetched by CMake during configuration only if BUILD_TESTS is ON - currently on release v1.16.0
+- **[testcoe](https://github.com/nircoe/testcoe):** Adds grid visualization and crash reporting to Google Test. Automatically fetched by CMake during configuration only if BUILD_TESTS is ON, via `cmake/testcoe.cmake` - currently pinned to v0.1.2. Pulls in Google Test transitively.
 
 ### Updating Dependencies (optional)
 
@@ -278,15 +278,16 @@ git add external/cryptopp-cmake  # or external/json
 git commit -m "Update submodule to <tag_name>"
 ```
 
-#### Updating Google Test
+#### Updating testcoe
 
-To update Google Test to a newer version, modify the FetchContent_Declare section in your CMakeLists.txt:
+To update testcoe to a newer version, bump the `GIT_TAG` in `cmake/testcoe.cmake`:
 
 ```cmake
 FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/<commit_hash>.zip  # Update URL with desired version
-  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    testcoe
+    GIT_REPOSITORY https://github.com/nircoe/testcoe.git
+    GIT_TAG v0.1.2  # Update to desired version
+    GIT_SHALLOW TRUE
 )
 ```
 
@@ -294,7 +295,7 @@ FetchContent_Declare(
 
 ## Testing
 
-The project includes a test suite built with Google Test. Tests cover:
+The project includes a test suite built with Google Test, run through a CLI dispatcher (`tests/main.cpp`) built on testcoe. Tests cover:
 
 - Basic data operations
 - Error handling and recovery
@@ -308,6 +309,13 @@ To run all tests:
 ```bash
 cd build
 ./tests/all_tests
+```
+
+Filter to a suite or a single test:
+
+```bash
+./tests/all_tests --suite=DataManagerTest
+./tests/all_tests --test=GameDataTest.DefaultConstructor
 ```
 
 To build and run individual test executables, enable the `BUILD_INDIVIDUAL_TESTS` option:
@@ -334,7 +342,7 @@ If you don't need the tests in your project, you can disable them by using the `
 cmake -DBUILD_TESTS=OFF ..
 ```
 
-This will prevent Google Test from being fetched and the test suite from being built, which can speed up the build process and reduce dependencies.
+This will prevent testcoe (and Google Test) from being fetched and the test suite from being built, which can speed up the build process and reduce dependencies.
 
 [Back to top](#table-of-contents)
 
