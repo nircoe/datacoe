@@ -37,8 +37,6 @@ int main(int argc, char **argv)
     std::cout << "Testing Cross-Cutting: integration, performance, memory, error handling" << std::endl;
     std::cout << std::endl;
 
-    testcoe::init(&argc, argv);
-
     bool askForAll = false;
     std::string suiteName;
     std::string testName;
@@ -52,18 +50,29 @@ int main(int argc, char **argv)
         else if (arg == "--all")
             askForAll = true;
         else if (!askForAll && arg.substr(0, 8) == "--suite=")
+        {
             suiteName = arg.substr(8);
+            if (suiteName.empty())
+            {
+                std::cerr << "Error: --suite= requires a suite name" << std::endl;
+                return 1;
+            }
+        }
         else if (!askForAll && arg.substr(0, 7) == "--test=")
         {
             std::string fullTest = arg.substr(7);
             size_t dotPos = fullTest.find('.');
-            if (dotPos != std::string::npos)
+            if (dotPos == std::string::npos)
             {
-                suiteName = fullTest.substr(0, dotPos);
-                testName = fullTest.substr(dotPos + 1);
+                std::cerr << "Error: --test= requires SUITE.TEST" << std::endl;
+                return 1;
             }
+            suiteName = fullTest.substr(0, dotPos);
+            testName = fullTest.substr(dotPos + 1);
         }
     }
+
+    testcoe::init(&argc, argv);
 
     if (askForAll || (testName.empty() && suiteName.empty()))
     {
