@@ -8,6 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(BUILD_TESTS "Build the test suite" ON)
 
+include(cmake/datacoe_config.cmake)
+
 # dependencies from external/ (git submodules)
 add_subdirectory(external/cryptopp-cmake)
 add_subdirectory(external/json)
@@ -39,17 +41,7 @@ add_subdirectory(src)
 
 if(BUILD_TESTS)
     include(FetchContent)
-    # Currently fetching googletest v1.16.0, 
-    # Feel free to upgrade and change the URL into the <commit hash>.zip file you would like to upgrade
-    FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/6910c9d9165801d8827d628cb72eb7ea9dd538c5.zip
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    )
-    if(WIN32)
-        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    endif()
-    FetchContent_MakeAvailable(googletest)
+    fetch_testcoe()
 
     add_subdirectory(tests)
 endif()
