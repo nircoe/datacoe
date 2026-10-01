@@ -37,8 +37,8 @@ endif()
 add_test(NAME all_tests COMMAND all_tests)
 
 # Optional: Create individual test executables
-option(BUILD_INDIVIDUAL_TESTS "Build individual test executables" OFF)
-if(BUILD_INDIVIDUAL_TESTS)
+option(DATACOE_BUILD_INDIVIDUAL_TESTS "Build individual test executables" OFF)
+if(DATACOE_BUILD_INDIVIDUAL_TESTS)
     foreach(test_file ${TEST_FILES})
         # Extract the base name without extension
         get_filename_component(test_name ${test_file} NAME_WE)
