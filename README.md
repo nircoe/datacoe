@@ -97,20 +97,22 @@ The library follows a layered architecture:
 ### Build Steps
 
 ```bash
-# Clone the repository with submodules
-git clone --recurse-submodules https://github.com/yourusername/datacoe.git
+# Clone the repository
+git clone https://github.com/yourusername/datacoe.git
 cd datacoe
 
 # Create a build directory
 mkdir build && cd build
 
-# Configure and build
-cmake ..
+# Configure (with tests) and build
+cmake -DDATACOE_BUILD_TESTS=ON ..
 cmake --build .
 
-# Run tests (optional)
+# Run tests (only built with DATACOE_BUILD_TESTS=ON)
 ./tests/all_tests
 ```
+
+Dependencies are downloaded with FetchContent at configure time, so the first configure needs network access.
 
 ### Integration Steps
 
@@ -118,37 +120,23 @@ cmake --build .
 
    Fork this repository to your own GitHub account.
 
-2. **Add as a Submodule:**
-
-   Add your forked repository as a Git submodule to your game project.
-
-3. **Modify the Files:**
+2. **Modify the Files:**
 
    Modify the `GameData.hpp/cpp` and `DataManager.hpp/cpp` files to include your game's data structures and logic.
 
-4. **Integrate into Your Project:**
+3. **Add to Your Project with FetchContent:**
 
-   There are two ways to integrate datacoe into your project:
-   
-   ### 4.1. Use as Subdirectory (Recommended for development)
-   
-   ```cmake
-   add_subdirectory(path/to/datacoe)
-   target_link_libraries(your_game_executable PRIVATE datacoe)
-   ```
+   Point FetchContent at your fork in your game's `CMakeLists.txt`:
 
-   ### 4.2. Install and Use with find_package (Better for distribution)
-   
    ```cmake
-   # Build and install datacoe
-   cd path/to/datacoe
-   mkdir build && cd build
-   cmake ..
-   cmake --build .
-   cmake --install . --prefix <install_path>
-   
-   # In your project's CMakeLists.txt
-   find_package(datacoe REQUIRED)
+   include(FetchContent)
+   FetchContent_Declare(
+       datacoe
+       GIT_REPOSITORY https://github.com/<your-username>/datacoe.git
+       GIT_TAG main
+   )
+   FetchContent_MakeAvailable(datacoe)
+
    target_link_libraries(your_game_executable PRIVATE datacoe)
    ```
 
@@ -247,40 +235,14 @@ To adapt this library for your game, you'll need to modify the core components t
 
 All dependencies are automatically handled:
 
-- **[CryptoPP-CMake](https://github.com/abdes/cryptopp-cmake):** Added as a git submodule at external/cryptopp-cmake (Fetching and building CryptoPP) - currently on release CRYPTOPP_8_9_0
-- **[nlohmann/json](https://github.com/nlohmann/json):** Added as a git submodule at external/json - currently on release v3.11.3
-- **[testcoe](https://github.com/nircoe/testcoe):** Adds grid visualization and crash reporting to Google Test. Automatically fetched by CMake during configuration only if BUILD_TESTS is ON, via `cmake/testcoe.cmake` - currently pinned to v0.1.2. Pulls in Google Test transitively.
+- **[CryptoPP-CMake](https://github.com/abdes/cryptopp-cmake):** Fetched and built by CMake during configuration, via `cmake/cryptopp.cmake` - currently pinned to CRYPTOPP_8_9_0
+- **[nlohmann/json](https://github.com/nlohmann/json):** Fetched by CMake during configuration, via `cmake/json.cmake` - currently pinned to v3.11.3
+- **[testcoe](https://github.com/nircoe/testcoe):** Adds grid visualization and crash reporting to Google Test. Automatically fetched by CMake during configuration only if `DATACOE_BUILD_TESTS` is ON, via `cmake/testcoe.cmake` - currently pinned to v0.1.2. Pulls in Google Test transitively.
 
 ### Updating Dependencies (optional)
 
-#### Updating the cryptopp-cmake or nlohmann/json submodules
-
-If you want to update either submodule to a different version:
-
-```bash
-# Navigate to the submodule directory
-cd external/cryptopp-cmake  # or external/json
-
-# Fetch all tags
-git fetch --tags
-
-# List available tags
-git tag -l
-
-# Checkout the specific tag you want
-git checkout <tag_name>  # e.g., CRYPTOPP_8_9_0 or v3.11.3
-
-# Return to the main project directory
-cd ../..
-
-# Now commit the submodule update
-git add external/cryptopp-cmake  # or external/json
-git commit -m "Update submodule to <tag_name>"
-```
-
-#### Updating testcoe
-
-To update testcoe to a newer version, bump the `GIT_TAG` in `cmake/testcoe.cmake`:
+To update a dependency, bump the `GIT_TAG` in `cmake/cryptopp.cmake`, `cmake/json.cmake` or `cmake/testcoe.cmake`.
+For example, testcoe:
 
 ```cmake
 FetchContent_Declare(
@@ -318,13 +280,20 @@ Filter to a suite or a single test:
 ./tests/all_tests --test=GameDataTest.DefaultConstructor
 ```
 
-To build and run individual test executables, enable the `BUILD_INDIVIDUAL_TESTS` option:
+To build and run individual test executables, enable the `DATACOE_BUILD_INDIVIDUAL_TESTS` option before `FetchContent_MakeAvailable(datacoe)`:
+
+```cmake
+set(DATACOE_BUILD_INDIVIDUAL_TESTS ON)
+```
+
+Then build and run a specific test:
 
 ```bash
-cmake -DBUILD_INDIVIDUAL_TESTS=ON ..
 cmake --build .
-./tests/error_handling_tests  # Run a specific test
+./tests/error_handling_tests
 ```
+
+When building datacoe standalone, pass it on the command line instead: `cmake -DDATACOE_BUILD_TESTS=ON -DDATACOE_BUILD_INDIVIDUAL_TESTS=ON ..`
 
 ### Customizing Tests
 
@@ -334,15 +303,15 @@ You'll need to modify the test files to match your game's data structures. The t
 2. Modify the test cases to use your specific data types and expected values
 3. Add or remove tests as needed for your specific requirements
 
-### Disabling Tests
+### Enabling Tests
 
-If you don't need the tests in your project, you can disable them by using the `BUILD_TESTS` option when configuring CMake:
+Tests are off by default. To build them, enable the `DATACOE_BUILD_TESTS` option before `FetchContent_MakeAvailable(datacoe)`:
 
-```bash
-cmake -DBUILD_TESTS=OFF ..
+```cmake
+set(DATACOE_BUILD_TESTS ON)
 ```
 
-This will prevent testcoe (and Google Test) from being fetched and the test suite from being built, which can speed up the build process and reduce dependencies.
+This fetches testcoe (and Google Test) and builds the test suite.
 
 [Back to top](#table-of-contents)
 
