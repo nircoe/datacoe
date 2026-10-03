@@ -6,71 +6,18 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(BUILD_TESTS "Build the test suite" ON)
-
 include(cmake/datacoe_config.cmake)
 
-# dependencies from external/ (git submodules)
-add_subdirectory(external/cryptopp-cmake)
-add_subdirectory(external/json)
-
-if(MSVC)
-    # CryptoPP 8.9.0 fails to build on newer MSVC - integer.cpp and zdeflate.cpp both use a
-    # removed helper function for CRYPTOPP_MSC_VERSION >= 1500/1600 with no upper bound. Upstream
-    # fixed both by capping them at < 1938; patch it in until they release a version with the fix.
-    function(datacoe_patch_cryptopp_msc_guard relative_file old_guard new_guard)
-        set(file "${CMAKE_CURRENT_BINARY_DIR}/external/cryptopp-cmake/${CRYPTOPP_INCLUDE_PREFIX}/${relative_file}")
-        if(EXISTS "${file}")
-            file(READ "${file}" contents)
-            string(REPLACE "${old_guard}" "${new_guard}" contents "${contents}")
-            file(WRITE "${file}" "${contents}")
-        endif()
-    endfunction()
-
-    datacoe_patch_cryptopp_msc_guard(integer.cpp
-        "#if (CRYPTOPP_MSC_VERSION >= 1500)"
-        "#if (CRYPTOPP_MSC_VERSION >= 1500) && (CRYPTOPP_MSC_VERSION < 1938)")
-    datacoe_patch_cryptopp_msc_guard(zdeflate.cpp
-        "#if CRYPTOPP_MSC_VERSION >= 1600"
-        "#if (CRYPTOPP_MSC_VERSION >= 1600) && (CRYPTOPP_MSC_VERSION < 1938)")
-endif()
+# dependencies
+include(FetchContent)
+fetch_cryptopp()
+fetch_json()
+fetch_testcoe()
 
 # project directories
 add_subdirectory(include)
 add_subdirectory(src)
 
-if(BUILD_TESTS)
-    include(FetchContent)
-    fetch_testcoe()
-
+if(DATACOE_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
-
-install(
-    FILES "${CMAKE_SOURCE_DIR}/external/json/single_include/nlohmann/json.hpp"
-    DESTINATION include/nlohmann
-)
-
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/datacoeconfigversion.cmake"
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
-
-if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-    set(CMAKE_INSTALL_LIBDIR lib)
-endif()
-
-install(
-    FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/datacoeconfigversion.cmake"
-        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/datacoeconfig.cmake"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/datacoe"
-)
-
-install(
-    EXPORT datacoeTargets
-    FILE datacoeTargets.cmake
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/datacoe"
-)

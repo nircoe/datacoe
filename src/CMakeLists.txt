@@ -24,7 +24,6 @@ endif()
 
 install(
     TARGETS datacoe
-    EXPORT datacoeTargets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin
