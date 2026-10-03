@@ -1,4 +1,4 @@
-function(fetch_testcoe)
+function(datacoe_fetch_testcoe)
     if(NOT DEFINED DATACOE_BUILD_TESTS)
         set(DATACOE_BUILD_TESTS OFF)
     endif()

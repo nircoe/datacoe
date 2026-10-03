@@ -1,4 +1,9 @@
-function(fetch_cryptopp)
+function(datacoe_fetch_cryptopp)
+    if(TARGET cryptopp)
+        message(STATUS "[datacoe] cryptopp already available, skipping fetch")
+        return()
+    endif()
+
     message(STATUS "[datacoe] Fetching cryptopp-cmake from source...")
 
     FetchContent_Declare(

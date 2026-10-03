@@ -1,4 +1,9 @@
-function(fetch_json)
+function(datacoe_fetch_json)
+    if(TARGET nlohmann_json::nlohmann_json)
+        message(STATUS "[datacoe] nlohmann_json already available, skipping fetch")
+        return()
+    endif()
+
     message(STATUS "[datacoe] Fetching json from source...")
 
     FetchContent_Declare(

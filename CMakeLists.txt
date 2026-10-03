@@ -10,9 +10,9 @@ include(cmake/datacoe_config.cmake)
 
 # dependencies
 include(FetchContent)
-fetch_cryptopp()
-fetch_json()
-fetch_testcoe()
+datacoe_fetch_cryptopp()
+datacoe_fetch_json()
+datacoe_fetch_testcoe()
 
 # project directories
 add_subdirectory(include)
