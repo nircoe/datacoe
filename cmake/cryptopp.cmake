@@ -6,6 +6,14 @@ function(datacoe_fetch_cryptopp)
 
     message(STATUS "[datacoe] Fetching cryptopp-cmake from source...")
 
+    # Nothing here uses Crypto++'s own test executable or install rules
+    if(NOT DEFINED CRYPTOPP_BUILD_TESTING)
+        set(CRYPTOPP_BUILD_TESTING OFF)
+    endif()
+    if(NOT DEFINED CRYPTOPP_INSTALL)
+        set(CRYPTOPP_INSTALL OFF)
+    endif()
+
     FetchContent_Declare(
         cryptopp-cmake
         GIT_REPOSITORY https://github.com/abdes/cryptopp-cmake.git
@@ -21,8 +29,8 @@ function(datacoe_fetch_cryptopp)
         # version with the fix.
         set(cryptopp_include_dir "${cryptopp-cmake_BINARY_DIR}/${CRYPTOPP_INCLUDE_PREFIX}")
 
-        function(datacoe_patch_cryptopp_msc_guard relative_file old_guard new_guard)
-            set(file "${cryptopp_include_dir}/${relative_file}")
+        function(datacoe_patch_cryptopp_msc_guard include_dir relative_file old_guard new_guard)
+            set(file "${include_dir}/${relative_file}")
             if(EXISTS "${file}")
                 file(READ "${file}" contents)
                 string(REPLACE "${old_guard}" "${new_guard}" contents "${contents}")
@@ -30,10 +38,10 @@ function(datacoe_fetch_cryptopp)
             endif()
         endfunction()
 
-        datacoe_patch_cryptopp_msc_guard(integer.cpp
+        datacoe_patch_cryptopp_msc_guard("${cryptopp_include_dir}" integer.cpp
             "#if (CRYPTOPP_MSC_VERSION >= 1500)"
             "#if (CRYPTOPP_MSC_VERSION >= 1500) && (CRYPTOPP_MSC_VERSION < 1938)")
-        datacoe_patch_cryptopp_msc_guard(zdeflate.cpp
+        datacoe_patch_cryptopp_msc_guard("${cryptopp_include_dir}" zdeflate.cpp
             "#if CRYPTOPP_MSC_VERSION >= 1600"
             "#if (CRYPTOPP_MSC_VERSION >= 1600) && (CRYPTOPP_MSC_VERSION < 1938)")
     endif()
