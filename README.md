@@ -239,6 +239,8 @@ All dependencies are automatically handled:
 - **[nlohmann/json](https://github.com/nlohmann/json):** Fetched by CMake during configuration, via `cmake/json.cmake` - currently pinned to v3.11.3
 - **[testcoe](https://github.com/nircoe/testcoe):** Adds grid visualization and crash reporting to Google Test. Automatically fetched by CMake during configuration only if `DATACOE_BUILD_TESTS` is ON, via `cmake/testcoe.cmake` - currently pinned to v0.1.2. Pulls in Google Test transitively.
 
+If your project already provides `nlohmann_json::nlohmann_json` or `cryptopp` before datacoe is added, datacoe skips fetching its own copy and uses yours. Fetch yours first.
+
 ### Updating Dependencies (optional)
 
 To update a dependency, bump the `GIT_TAG` in `cmake/cryptopp.cmake`, `cmake/json.cmake` or `cmake/testcoe.cmake`.
