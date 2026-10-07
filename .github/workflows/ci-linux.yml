@@ -20,13 +20,13 @@ jobs:
           - name: "Linux GCC"
             compiler: gcc
             cmake-generator: 'Ninja'
-            cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
+            cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
           
           # Linux with Clang
           - name: "Linux Clang"
             compiler: clang
             cmake-generator: 'Ninja'
-            cmake-options: '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
+            cmake-options: '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
 
     steps:
     - name: Checkout repository
@@ -38,13 +38,20 @@ jobs:
         sudo apt-get install -y ninja-build
       shell: bash
 
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ccache-${{ runner.os }}-${{ matrix.compiler }}-${{
+          hashFiles('cmake/testcoe.cmake', 'cmake/cryptopp.cmake', 'cmake/json.cmake', 'tests/CMakeLists.txt') }}
+        restore-keys: ccache-${{ runner.os }}-${{ matrix.compiler }}-
+
     - name: Configure CMake
       run: |
         cmake -B build -G "${{ matrix.cmake-generator }}" ${{ matrix.cmake-options }} -DDATACOE_BUILD_TESTS=ON
 
     - name: Build
       run: |
-        cmake --build build --config Release
+        cmake --build build --config Release --parallel
 
     - name: Run tests
       working-directory: build
