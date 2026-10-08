@@ -12,6 +12,8 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: windows-latest
     if: github.event.pull_request.draft == false || github.event_name == 'push'
+    env:
+      COMMON_CMAKE_FLAGS: -DCMAKE_BUILD_TYPE=Release
     strategy:
       fail-fast: false
       matrix:
@@ -21,42 +23,50 @@ jobs:
             compiler: msvc
             cmake-generator: 'Ninja'
             cmake-options: >-
-              -DCMAKE_BUILD_TYPE=Release
               -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+              -DCMAKE_C_COMPILER_LAUNCHER=sccache
+              -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
               -DCMAKE_POLICY_DEFAULT_CMP0141=NEW
               -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
 
           # Windows with MinGW (GCC)
           - name: "Windows MinGW"
             compiler: gcc
-            cmake-generator: 'MinGW Makefiles'
-            cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
+            cmake-generator: 'Ninja'
+            cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v7
 
-    - name: Install Windows build tools
-      if: matrix.compiler != 'msvc'
-      run: |
-        if [ "${{ matrix.compiler }}" == "clang" ]; then
-          choco install ninja
-        elif [ "${{ matrix.compiler }}" == "gcc" ]; then
-          choco install mingw
-        fi
-      shell: bash
-
     - name: Setup MSVC dev environment
       if: matrix.compiler == 'msvc'
       uses: ilammy/msvc-dev-cmd@v1.13.0
 
+    - name: Setup ccache
+      if: matrix.compiler == 'gcc'
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ccache-${{ runner.os }}-${{ matrix.compiler }}-${{
+          hashFiles('cmake/testcoe.cmake', 'cmake/cryptopp.cmake', 'cmake/json.cmake', 'tests/CMakeLists.txt') }}
+        restore-keys: ccache-${{ runner.os }}-${{ matrix.compiler }}-
+
+    - name: Setup sccache
+      if: matrix.compiler == 'msvc'
+      uses: mozilla-actions/sccache-action@v0.0.11
+
+    - name: Set sccache env vars
+      if: matrix.compiler == 'msvc'
+      run: echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+      shell: bash
+
     - name: Configure CMake
       run: |
-        cmake -B build -G "${{ matrix.cmake-generator }}" ${{ matrix.cmake-options }} -DDATACOE_BUILD_TESTS=ON
+        cmake -B build -G "${{ matrix.cmake-generator }}" ${{ env.COMMON_CMAKE_FLAGS }} ${{ matrix.cmake-options }} -DDATACOE_BUILD_TESTS=ON
 
     - name: Build
       run: |
-        cmake --build build --config Release
+        cmake --build build --config Release --parallel
 
     - name: Run tests
       working-directory: build

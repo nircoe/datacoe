@@ -12,6 +12,11 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false || github.event_name == 'push'
+    env:
+      COMMON_CMAKE_FLAGS: >-
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        -DCMAKE_BUILD_TYPE=Release
     strategy:
       fail-fast: false
       matrix:
@@ -32,19 +37,20 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v7
 
-    - name: Install ninja-build
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y ninja-build
-      shell: bash
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ccache-${{ runner.os }}-${{ matrix.compiler }}-${{
+          hashFiles('cmake/testcoe.cmake', 'cmake/cryptopp.cmake', 'cmake/json.cmake', 'tests/CMakeLists.txt') }}
+        restore-keys: ccache-${{ runner.os }}-${{ matrix.compiler }}-
 
     - name: Configure CMake
       run: |
-        cmake -B build -G "${{ matrix.cmake-generator }}" ${{ matrix.cmake-options }} -DDATACOE_BUILD_TESTS=ON
+        cmake -B build -G "${{ matrix.cmake-generator }}" ${{ env.COMMON_CMAKE_FLAGS }} ${{ matrix.cmake-options }} -DDATACOE_BUILD_TESTS=ON
 
     - name: Build
       run: |
-        cmake --build build --config Release
+        cmake --build build --config Release --parallel
 
     - name: Run tests
       working-directory: build
