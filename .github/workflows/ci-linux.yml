@@ -12,6 +12,11 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false || github.event_name == 'push'
+    env:
+      COMMON_CMAKE_FLAGS: >-
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        -DCMAKE_BUILD_TYPE=Release
     strategy:
       fail-fast: false
       matrix:
@@ -20,13 +25,13 @@ jobs:
           - name: "Linux GCC"
             compiler: gcc
             cmake-generator: 'Ninja'
-            cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
+            cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
           
           # Linux with Clang
           - name: "Linux Clang"
             compiler: clang
             cmake-generator: 'Ninja'
-            cmake-options: '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
+            cmake-options: '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
 
     steps:
     - name: Checkout repository
@@ -41,7 +46,7 @@ jobs:
 
     - name: Configure CMake
       run: |
-        cmake -B build -G "${{ matrix.cmake-generator }}" ${{ matrix.cmake-options }} -DDATACOE_BUILD_TESTS=ON
+        cmake -B build -G "${{ matrix.cmake-generator }}" ${{ env.COMMON_CMAKE_FLAGS }} ${{ matrix.cmake-options }} -DDATACOE_BUILD_TESTS=ON
 
     - name: Build
       run: |

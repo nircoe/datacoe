@@ -12,6 +12,8 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: windows-latest
     if: github.event.pull_request.draft == false || github.event_name == 'push'
+    env:
+      COMMON_CMAKE_FLAGS: -DCMAKE_BUILD_TYPE=Release
     strategy:
       fail-fast: false
       matrix:
@@ -21,7 +23,6 @@ jobs:
             compiler: msvc
             cmake-generator: 'Ninja'
             cmake-options: >-
-              -DCMAKE_BUILD_TYPE=Release
               -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
               -DCMAKE_C_COMPILER_LAUNCHER=sccache
               -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
@@ -31,7 +32,7 @@ jobs:
           # Windows with MinGW (GCC)
           - name: "Windows MinGW"
             compiler: gcc
-            cmake-generator: 'MinGW Makefiles'
+            cmake-generator: 'Ninja'
             cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
 
     steps:
@@ -61,11 +62,11 @@ jobs:
 
     - name: Configure CMake
       run: |
-        cmake -B build -G "${{ matrix.cmake-generator }}" ${{ matrix.cmake-options }} -DDATACOE_BUILD_TESTS=ON
+        cmake -B build -G "${{ matrix.cmake-generator }}" ${{ env.COMMON_CMAKE_FLAGS }} ${{ matrix.cmake-options }} -DDATACOE_BUILD_TESTS=ON
 
     - name: Build
       run: |
-        cmake --build build --config Release --parallel 4
+        cmake --build build --config Release --parallel
 
     - name: Run tests
       working-directory: build
