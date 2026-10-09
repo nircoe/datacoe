@@ -55,5 +55,5 @@ jobs:
     - name: Run tests
       working-directory: build
       run: |
-        ./tests/all_tests
+        ./tests/datacoe_tests
       shell: bash

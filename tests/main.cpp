@@ -4,7 +4,7 @@
 
 int printHelp()
 {
-    std::cout << "Usage: ./all_tests [options]" << std::endl;
+    std::cout << "Usage: ./datacoe_tests [options]" << std::endl;
     std::cout << "Options:" << std::endl;
     std::cout << "  --help           Display this help message" << std::endl;
     std::cout << "  --all            Run all tests (default)" << std::endl;
@@ -21,8 +21,8 @@ int printHelp()
     std::cout << "  ErrorHandlingTest        - Error handling and recovery tests" << std::endl;
     std::cout << std::endl;
     std::cout << "Example usage:" << std::endl;
-    std::cout << "  ./all_tests --suite=DataManagerTest" << std::endl;
-    std::cout << "  ./all_tests --test=GameDataTest.DefaultConstructor" << std::endl;
+    std::cout << "  ./datacoe_tests --suite=DataManagerTest" << std::endl;
+    std::cout << "  ./datacoe_tests --test=GameDataTest.DefaultConstructor" << std::endl;
     return 0;
 }
 
