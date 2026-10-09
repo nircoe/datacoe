@@ -16,8 +16,8 @@ target_include_directories(datacoe
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(datacoe PRIVATE -Wall -Wextra -Werror)
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(datacoe PRIVATE /W3 /WX)
+datacoe_enable_strict_warnings(datacoe)
+
+if(MINGW)
+    target_link_options(datacoe INTERFACE -static-libgcc -static-libstdc++ -static)
 endif()
