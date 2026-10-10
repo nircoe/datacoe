@@ -1,6 +1,8 @@
 #pragma once
 
+#include <format>
 #include <string>
+#include <string_view>
 
 namespace datacoe
 {
@@ -22,4 +24,13 @@ namespace datacoe
         error_code code;
         std::string message;
     };
+
+    namespace internal
+    {
+        [[nodiscard]] inline error with_prefix(std::string_view function, error e)
+        {
+            e.message = std::format("{}: {}", function, e.message);
+            return e;
+        }
+    } // namespace internal
 } // namespace datacoe

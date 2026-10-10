@@ -10,6 +10,7 @@ set(TEST_FILES
     performance_tests.cpp
     memory_tests.cpp
     error_handling_tests.cpp
+    save_load_tests.cpp
     saveable_tests.cpp
     utils/io_tests.cpp
 )

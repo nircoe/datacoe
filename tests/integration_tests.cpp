@@ -1,195 +1,153 @@
+#include <datacoe/save_load.hpp>
+#include <support/test_support.hpp>
 #include <gtest/gtest.h>
-#include <datacoe/data_manager.hpp>
-#include <datacoe/data_reader_writer.hpp>
+#include <expected>
 #include <filesystem>
-#include <fstream>
-#include <thread>
-#include <chrono>
 
-namespace datacoe
+using namespace datacoe;
+using namespace datacoe_test;
+
+namespace
 {
-    class IntegrationTest : public ::testing::Test
+    template <typename T>
+    void expect_error(const std::expected<T, error> &result, error_code code)
     {
-    protected:
-        std::string m_testFilename;
-
-        void SetUp() override
-        {
-            m_testFilename = "test_integration.json";
-            // Clean up any leftover files
-            try
-            {
-                if (std::filesystem::exists(m_testFilename))
-                {
-                    std::filesystem::remove(m_testFilename);
-                }
-            }
-            catch (const std::filesystem::filesystem_error &)
-            {
-                // Ignore if file doesn't exist
-            }
-        }
-
-        void TearDown() override
-        {
-            // Give file handles time to close
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-            // Try to clean up the test file
-            for (int i = 0; i < 5; i++)
-            {
-                try
-                {
-                    if (std::filesystem::exists(m_testFilename))
-                    {
-                        std::filesystem::remove(m_testFilename);
-                    }
-                    break;
-                }
-                catch (const std::filesystem::filesystem_error &e)
-                {
-                    std::cerr << "TearDown() Error: " << e.what() << std::endl;
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                }
-            }
-        }
-    };
-
-    TEST_F(IntegrationTest, FullLifecycle)
-    {
-        try
-        {
-            // 1. Create game data
-            GameData originalData("IntegrationTest", 1000);
-
-            // 2. Write directly with DataReaderWriter
-            ASSERT_TRUE(DataReaderWriter::writeData(originalData, m_testFilename));
-
-            // 3. Load with DataManager
-            DataManager dm;
-            bool loadResult = dm.init(m_testFilename);
-            ASSERT_TRUE(loadResult) << "init() should return true when loading an existing file";
-
-            // 4. Verify data loaded correctly
-            const GameData &loadedData = dm.getGamedata();
-            ASSERT_EQ(loadedData.getNickname(), "IntegrationTest");
-            ASSERT_EQ(loadedData.getHighscore(), 1000);
-
-            // 5. Modify and save with DataManager
-            GameData updatedData = dm.getGamedata();
-            updatedData.setHighscore(2000);
-            dm.setGamedata(updatedData);
-            ASSERT_TRUE(dm.saveGame());
-
-            // 6. Read directly with DataReaderWriter
-            std::optional<GameData> readData = DataReaderWriter::readData(m_testFilename);
-            ASSERT_TRUE(readData.has_value());
-            ASSERT_EQ(readData.value().getNickname(), "IntegrationTest");
-            ASSERT_EQ(readData.value().getHighscore(), 2000);
-        }
-        catch (const std::exception &e)
-        {
-            FAIL() << "Unexpected exception: " << e.what();
-        }
+        ASSERT_FALSE(result.has_value());
+        EXPECT_EQ(result.error().code, code);
     }
 
-    TEST_F(IntegrationTest, MultipleInstances)
+    void expect_round_trip(const std::filesystem::path &path, const player_save &data, bool encrypt = false)
     {
-        try
-        {
-            // Create and use multiple DataManager instances with the same file
-            DataManager dm1;
-            bool initResult1 = dm1.init(m_testFilename);
-            ASSERT_FALSE(initResult1) << "init() should return false for new file";
+        const auto saved = save(path, data, encrypt);
+        ASSERT_TRUE(saved.has_value()) << saved.error().message;
 
-            GameData data1;
-            data1.setNickname("Player1");
-            data1.setHighscore(100);
-            dm1.setGamedata(data1);
-            ASSERT_TRUE(dm1.saveGame());
-
-            // Create a second instance and load the data
-            DataManager dm2;
-            bool initResult2 = dm2.init(m_testFilename);
-            ASSERT_TRUE(initResult2) << "init() should return true when loading existing file";
-            ASSERT_EQ(dm2.getGamedata().getNickname(), "Player1");
-            ASSERT_EQ(dm2.getGamedata().getHighscore(), 100);
-
-            // Modify with the second instance
-            GameData data2 = dm2.getGamedata();
-            data2.setHighscore(200);
-            dm2.setGamedata(data2);
-            ASSERT_TRUE(dm2.saveGame());
-
-            // Create a third instance and check data
-            DataManager dm3;
-            bool initResult3 = dm3.init(m_testFilename);
-            ASSERT_TRUE(initResult3) << "init() should return true when loading existing file";
-            ASSERT_EQ(dm3.getGamedata().getNickname(), "Player1");
-            ASSERT_EQ(dm3.getGamedata().getHighscore(), 200);
-
-            // Original instance should still have old data in memory
-            ASSERT_EQ(dm1.getGamedata().getHighscore(), 100);
-
-            // After reloading, it should see the new data
-            bool loadResult = dm1.loadGame();
-            ASSERT_TRUE(loadResult) << "loadGame() should return true when file exists";
-            ASSERT_EQ(dm1.getGamedata().getHighscore(), 200);
-        }
-        catch (const std::exception &e)
-        {
-            FAIL() << "Unexpected exception: " << e.what();
-        }
+        const auto loaded = load<player_save>(path);
+        ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
+        EXPECT_EQ(*loaded, data);
     }
 
-    TEST_F(IntegrationTest, DataCorruption)
+    void expect_loads(const std::filesystem::path &path, const player_save &expected)
     {
-        try
-        {
-            // Setup initial valid data
-            DataManager dm1;
-            bool initResult1 = dm1.init(m_testFilename);
-            ASSERT_FALSE(initResult1) << "init() should return false for new file";
-
-            GameData data1;
-            data1.setNickname("ValidData");
-            data1.setHighscore(100);
-            dm1.setGamedata(data1);
-            ASSERT_TRUE(dm1.saveGame());
-
-            // Corrupt the file
-            {
-                std::ofstream file(m_testFilename, std::ios::trunc);
-                file << "This is corrupted data that can't be decrypted";
-                file.close();
-            }
-
-            // Try to load corrupted data
-            DataManager dm2;
-            bool initResult2 = dm2.init(m_testFilename);
-            ASSERT_FALSE(initResult2) << "init() should return false for corrupted file";
-
-            // Should initialize with default empty values
-            ASSERT_EQ(dm2.getGamedata().getNickname(), "");
-            ASSERT_EQ(dm2.getGamedata().getHighscore(), 0);
-
-            // Save new data
-            GameData data2;
-            data2.setNickname("RecoveredData");
-            data2.setHighscore(300);
-            dm2.setGamedata(data2);
-            ASSERT_TRUE(dm2.saveGame());
-
-            // Verify the new data was saved correctly
-            DataManager dm3;
-            bool initResult3 = dm3.init(m_testFilename);
-            ASSERT_TRUE(initResult3) << "init() should return true when loading the repaired file";
-            ASSERT_EQ(dm3.getGamedata().getNickname(), "RecoveredData");
-            ASSERT_EQ(dm3.getGamedata().getHighscore(), 300);
-        }
-        catch (const std::exception &e)
-        {
-            FAIL() << "Unexpected exception: " << e.what();
-        }
+        const auto loaded = load<player_save>(path);
+        ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
+        EXPECT_EQ(*loaded, expected);
     }
-} // namespace datacoe
+} // namespace
+
+//==============================================================================
+//                IntegrationTests - save and load workflow tests
+//==============================================================================
+
+class IntegrationTests : public ::testing::Test
+{
+protected:
+    temp_dir m_dir;
+};
+
+//==============================================================================
+//                                  Lifecycle
+//==============================================================================
+
+TEST_F(IntegrationTests, FullLifecycle)
+{
+    const auto path = m_dir / "game.sav";
+
+    // Test 1: no save yet, this is the new game signal
+    expect_error(load<player_save>(path), error_code::file_not_found);
+
+    // Test 2: new game, save the default data
+    player_save data;
+    expect_round_trip(path, data);
+
+    // Test 3: play, save again
+    data.nickname = "Player1";
+    data.highscore = 100;
+    data.unlocked = {1, 2};
+    expect_round_trip(path, data);
+
+    // Test 4: play more, the last save wins
+    data.highscore = 250;
+    data.unlocked.push_back(3);
+    expect_round_trip(path, data);
+
+    expect_loads(path, player_save{"Player1", 250, {1, 2, 3}});
+}
+
+TEST_F(IntegrationTests, MultipleFiles)
+{
+    const player_save first{"first", 10, {1}};
+    const player_save second{"second", 20, {2, 2}};
+    const player_save third{"third", 30, {}};
+
+    const auto first_path = m_dir / "first.sav";
+    const auto second_path = m_dir / "second.sav";
+    const auto third_path = m_dir / "third.sav";
+
+    // Test 1: independent files hold different data
+    expect_round_trip(first_path, first);
+    expect_round_trip(second_path, second);
+    expect_round_trip(third_path, third);
+
+    // Test 2: saving one file doesn't change the others
+    const player_save changed{"changed", 99, {9}};
+    expect_round_trip(second_path, changed);
+
+    expect_loads(first_path, first);
+    expect_loads(second_path, changed);
+    expect_loads(third_path, third);
+
+    // Test 3: Encrypted, encrypted and plain files side by side in one directory
+    {
+        const player_save secret{"secret", 40, {4}};
+        const auto secret_path = m_dir / "secret.sav";
+
+        expect_round_trip(secret_path, secret, true);
+
+        expect_loads(first_path, first);
+        expect_loads(secret_path, secret);
+    }
+}
+
+TEST_F(IntegrationTests, EncryptionToggleLifecycle)
+{
+    const auto path = m_dir / "toggle.sav";
+
+    // Test 1: switch between plain and encrypted over several save and load cycles
+    for (int i = 0; i < 6; ++i)
+    {
+        const bool encrypt = i % 2 == 1;
+        const player_save data{"cycle", i, {i}};
+
+        expect_round_trip(path, data, encrypt);
+        EXPECT_EQ(read_text(path).starts_with("DATACOE_ENCRYPTED"), encrypt);
+    }
+}
+
+//==============================================================================
+//                              Corruption Recovery
+//==============================================================================
+
+TEST_F(IntegrationTests, CorruptionRecovery)
+{
+    // Test 1: garbage over a plain save, load fails and saving fresh data recovers
+    {
+        const auto path = m_dir / "plain.sav";
+        expect_round_trip(path, player_save{"valid", 100, {}});
+
+        write_text(path, "This is corrupted data that can't be parsed");
+        EXPECT_FALSE(load<player_save>(path).has_value());
+
+        expect_round_trip(path, player_save{"recovered", 300, {}});
+    }
+
+    // Test 2: Encrypted, truncated to the prefix, load fails and saving fresh data recovers
+    {
+        const auto path = m_dir / "encrypted.sav";
+        expect_round_trip(path, player_save{"valid", 100, {}}, true);
+
+        write_text(path, "DATACOE_ENCRYPTED");
+        EXPECT_FALSE(load<player_save>(path).has_value());
+
+        expect_round_trip(path, player_save{"recovered", 300, {}}, true);
+    }
+}
