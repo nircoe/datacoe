@@ -10,6 +10,8 @@ set(TEST_FILES
     performance_tests.cpp
     memory_tests.cpp
     error_handling_tests.cpp
+    saveable_tests.cpp
+    utils/io_tests.cpp
 )
 
 add_executable(datacoe_tests
@@ -22,6 +24,8 @@ target_link_libraries(datacoe_tests
         datacoe
         testcoe
 )
+
+target_include_directories(datacoe_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 datacoe_enable_strict_warnings(datacoe_tests)
 datacoe_enable_static_mingw_runtime(datacoe_tests)
@@ -45,6 +49,8 @@ if(DATACOE_BUILD_INDIVIDUAL_TESTS)
                 datacoe
                 testcoe
         )
+
+        target_include_directories(${test_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
         datacoe_enable_strict_warnings(${test_name})
         datacoe_enable_static_mingw_runtime(${test_name})
