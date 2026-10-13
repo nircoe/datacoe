@@ -1,387 +1,244 @@
+#include <datacoe/save_load.hpp>
+#include <support/test_support.hpp>
 #include <gtest/gtest.h>
-#include <datacoe/data_manager.hpp>
-#include <datacoe/data_reader_writer.hpp>
-#include <filesystem>
-#include <chrono>
-#include <vector>
-#include <random>
 #include <algorithm>
+#include <chrono>
+#include <cstddef>
+#include <expected>
+#include <filesystem>
+#include <iomanip>
 #include <iostream>
+#include <numeric>
+#include <random>
+#include <string>
+#include <system_error>
+#include <vector>
 
-namespace datacoe
+using namespace datacoe;
+using namespace datacoe_test;
+
+namespace
 {
-    class PerformanceTest : public ::testing::Test
+    template <typename Func>
+    long long measure_microseconds(Func &&func)
     {
-    protected:
-        std::string m_testFilename;
-
-        void SetUp() override
-        {
-            m_testFilename = "perf_test_data.json";
-            // Clean up any leftover files from previous tests
-            try
-            {
-                if (std::filesystem::exists(m_testFilename))
-                {
-                    std::filesystem::remove(m_testFilename);
-                }
-            }
-            catch (const std::filesystem::filesystem_error &)
-            {
-                // Ignore errors if file doesn't exist
-            }
-        }
-
-        void TearDown() override
-        {
-            try
-            {
-                if (std::filesystem::exists(m_testFilename))
-                {
-                    std::filesystem::remove(m_testFilename);
-                }
-            }
-            catch (const std::filesystem::filesystem_error &)
-            {
-                // Ignore errors
-            }
-        }
-
-        template <typename Func>
-        long long measureExecutionTime(Func &&func)
-        {
-            auto start = std::chrono::high_resolution_clock::now();
-            func();
-            auto end = std::chrono::high_resolution_clock::now();
-            return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-        }
-    };
-
-    TEST_F(PerformanceTest, SavePerformance)
-    {
-        constexpr int iterations = 100;
-
-        DataManager dm;
-        bool initResult = dm.init(m_testFilename);
-        ASSERT_FALSE(initResult) << "init() should return false for new file";
-
-        GameData gameData;
-        gameData.setNickname("PerformanceTest");
-        gameData.setHighscore(10000);
-        dm.setGamedata(gameData);
-
-        std::vector<long long> timings;
-        timings.reserve(iterations);
-
-        // Measure save performance
-        for (int i = 0; i < iterations; i++)
-        {
-            // Change data slightly each iteration
-            GameData updatedData = dm.getGamedata();
-            updatedData.setHighscore(10000 + i);
-            dm.setGamedata(updatedData);
-
-            auto duration = measureExecutionTime([&]()
-                                                 { dm.saveGame(); });
-            timings.push_back(duration);
-        }
-
-        // Calculate statistics
-        double avg = 0.0;
-        for (auto time : timings)
-        {
-            avg += time;
-        }
-        avg /= iterations;
-
-        std::sort(timings.begin(), timings.end());
-        long long median = timings[iterations / 2];
-        long long p95 = timings[static_cast<int>(iterations * 0.95)];
-        long long min = timings.front();
-        long long max = timings.back();
-
-        std::cout << "Save Performance (microseconds):" << std::endl;
-        std::cout << "  Average: " << avg << std::endl;
-        std::cout << "  Median: " << median << std::endl;
-        std::cout << "  95th percentile: " << p95 << std::endl;
-        std::cout << "  Min: " << min << std::endl;
-        std::cout << "  Max: " << max << std::endl;
-
-        // No strict assertions here, just reporting performance metrics
-        // You might want to add baseline assertions based on your performance requirements
-        // For example:
-        // ASSERT_LT(avg, 10000) << "Average save time exceeds 10ms";
+        const auto start = std::chrono::steady_clock::now();
+        func();
+        const auto end = std::chrono::steady_clock::now();
+        return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
     }
 
-    TEST_F(PerformanceTest, LoadPerformance)
+    long long timed_save(const std::filesystem::path &path, const player_save &data, bool encrypt = false)
     {
-        constexpr int iterations = 100;
-
-        // First create a file to load
-        {
-            DataManager dm;
-            bool initResult = dm.init(m_testFilename);
-            ASSERT_FALSE(initResult) << "init() should return false for new file";
-
-            GameData gameData;
-            gameData.setNickname("PerformanceTest");
-            gameData.setHighscore(10000);
-            dm.setGamedata(gameData);
-
-            dm.saveGame();
-        }
-
-        std::vector<long long> timings;
-        timings.reserve(iterations);
-
-        // Measure load performance
-        for (int i = 0; i < iterations; i++)
-        {
-            auto duration = measureExecutionTime([&]()
-                                                 {
-            DataManager dm;
-            bool loadResult = dm.init(m_testFilename);
-            ASSERT_TRUE(loadResult) << "init() should return true when loading existing file";
-            // Force load by accessing game data
-            auto data = dm.getGamedata(); });
-            timings.push_back(duration);
-        }
-
-        // Calculate statistics
-        double avg = 0.0;
-        for (auto time : timings)
-        {
-            avg += time;
-        }
-        avg /= iterations;
-
-        std::sort(timings.begin(), timings.end());
-        long long median = timings[iterations / 2];
-        long long p95 = timings[static_cast<int>(iterations * 0.95)];
-        long long min = timings.front();
-        long long max = timings.back();
-
-        std::cout << "Load Performance (microseconds):" << std::endl;
-        std::cout << "  Average: " << avg << std::endl;
-        std::cout << "  Median: " << median << std::endl;
-        std::cout << "  95th percentile: " << p95 << std::endl;
-        std::cout << "  Min: " << min << std::endl;
-        std::cout << "  Max: " << max << std::endl;
-
-        // No strict assertions here, just reporting performance metrics
+        std::expected<void, error> saved;
+        const auto time = measure_microseconds([&] { saved = save(path, data, encrypt); });
+        EXPECT_TRUE(saved.has_value()) << saved.error().message;
+        return time;
     }
 
-    TEST_F(PerformanceTest, StressTest)
+    long long timed_load(const std::filesystem::path &path, const player_save &expected)
     {
-        constexpr int iterations = 500;
-
-        DataManager dm;
-        bool initResult = dm.init(m_testFilename);
-        ASSERT_FALSE(initResult) << "init() should return false for new file";
-
-        // Random generator for mixed operations
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> opDist(0, 2); // 0=save, 1=load, 2=new game
-        std::uniform_int_distribution<> scoreDist(0, 100000);
-
-        std::vector<std::string> names = {"Player1", "Player2", "Player3", "Gamer", "Pro", "Noob", "Champion"};
-        std::uniform_int_distribution<> nameDist(0, static_cast<int>(names.size() - 1));
-
-        auto start = std::chrono::high_resolution_clock::now();
-
-        for (int i = 0; i < iterations; i++)
+        std::expected<player_save, error> loaded;
+        const auto time = measure_microseconds([&] { loaded = load<player_save>(path); });
+        EXPECT_TRUE(loaded.has_value()) << loaded.error().message;
+        if (loaded.has_value())
         {
-            int operation = opDist(gen);
-
-            switch (operation)
-            {
-            case 0: // Save
-            {
-                GameData gameData;
-                gameData.setNickname(names[nameDist(gen)]);
-                gameData.setHighscore(scoreDist(gen));
-                dm.setGamedata(gameData);
-                dm.saveGame();
-                break;
-            }
-            case 1: // Load
-                dm.loadGame();
-                break;
-            case 2: // New game
-                dm.newGame();
-                break;
-            }
+            EXPECT_EQ(*loaded, expected);
         }
-
-        auto end = std::chrono::high_resolution_clock::now();
-        auto totalDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-
-        std::cout << "Stress Test Results:" << std::endl;
-        std::cout << "  Total time for " << iterations << " operations: " << totalDuration << "ms" << std::endl;
-        std::cout << "  Average time per operation: " << (totalDuration * 1000.0 / iterations) << "us" << std::endl;
-
-        // Verify the manager is still functional after stress
-        GameData finalData;
-        finalData.setNickname("FinalCheck");
-        finalData.setHighscore(12345);
-        dm.setGamedata(finalData);
-        ASSERT_TRUE(dm.saveGame());
-
-        DataManager dm2;
-        bool finalLoadResult = dm2.init(m_testFilename);
-        ASSERT_TRUE(finalLoadResult) << "init() should return true after saving final data";
-        ASSERT_EQ(dm2.getGamedata().getNickname(), "FinalCheck");
-        ASSERT_EQ(dm2.getGamedata().getHighscore(), 12345);
+        return time;
     }
 
-    TEST_F(PerformanceTest, EncryptionPerformanceComparison)
+    double average(const std::vector<long long> &timings)
     {
-        constexpr int iterations = 50;
-
-        // Setup test data
-        GameData testData("PerformanceTest", 12345);
-        std::string encryptedFilename = m_testFilename + ".encrypted";
-        std::string unencryptedFilename = m_testFilename + ".unencrypted";
-
-        std::vector<long long> encryptedSaveTimings;
-        std::vector<long long> unencryptedSaveTimings;
-        std::vector<long long> encryptedLoadTimings;
-        std::vector<long long> unencryptedLoadTimings;
-
-        try
-        {
-            encryptedSaveTimings.reserve(iterations);
-            unencryptedSaveTimings.reserve(iterations);
-            encryptedLoadTimings.reserve(iterations);
-            unencryptedLoadTimings.reserve(iterations);
-
-            // Create initial files
-            ASSERT_TRUE(DataReaderWriter::writeData(testData, encryptedFilename, true));
-            ASSERT_TRUE(DataReaderWriter::writeData(testData, unencryptedFilename, false));
-
-            // Measure save performance
-            for (int i = 0; i < iterations; i++)
-            {
-                // Modify data slightly to avoid caching effects
-                testData.setHighscore(12345 + i);
-
-                // Measure encrypted save
-                auto encryptedSaveTime = measureExecutionTime([&]()
-                                                              { DataReaderWriter::writeData(testData, encryptedFilename, true); });
-                encryptedSaveTimings.push_back(encryptedSaveTime);
-
-                // Measure unencrypted save
-                auto unencryptedSaveTime = measureExecutionTime([&]()
-                                                                { DataReaderWriter::writeData(testData, unencryptedFilename, false); });
-                unencryptedSaveTimings.push_back(unencryptedSaveTime);
-            }
-
-            // Measure load performance
-            for (int i = 0; i < iterations; i++)
-            {
-                // Measure encrypted load
-                auto encryptedLoadTime = measureExecutionTime([&]()
-                                                              { auto data = DataReaderWriter::readData(encryptedFilename, true); });
-                encryptedLoadTimings.push_back(encryptedLoadTime);
-
-                // Measure unencrypted load
-                auto unencryptedLoadTime = measureExecutionTime([&]()
-                                                                { auto data = DataReaderWriter::readData(unencryptedFilename, false); });
-                unencryptedLoadTimings.push_back(unencryptedLoadTime);
-            }
-
-            // Calculate statistics for encrypted save
-            double encSaveAvg = 0.0;
-            for (auto time : encryptedSaveTimings)
-            {
-                encSaveAvg += time;
-            }
-            encSaveAvg /= iterations;
-
-            // Calculate statistics for unencrypted save
-            double unencSaveAvg = 0.0;
-            for (auto time : unencryptedSaveTimings)
-            {
-                unencSaveAvg += time;
-            }
-            unencSaveAvg /= iterations;
-
-            // Calculate statistics for encrypted load
-            double encLoadAvg = 0.0;
-            for (auto time : encryptedLoadTimings)
-            {
-                encLoadAvg += time;
-            }
-            encLoadAvg /= iterations;
-
-            // Calculate statistics for unencrypted load
-            double unencLoadAvg = 0.0;
-            for (auto time : unencryptedLoadTimings)
-            {
-                unencLoadAvg += time;
-            }
-            unencLoadAvg /= iterations;
-
-            // Calculate performance impact percentages
-            double saveImpact = ((encSaveAvg / unencSaveAvg) - 1.0) * 100.0;
-            double loadImpact = ((encLoadAvg / unencLoadAvg) - 1.0) * 100.0;
-
-            // Output results
-            std::cout << "=============================================" << std::endl;
-            std::cout << "     Encryption Performance Comparison" << std::endl;
-            std::cout << "=============================================" << std::endl;
-            std::cout << std::fixed << std::setprecision(2);
-            std::cout << "Save operations (microseconds):" << std::endl;
-            std::cout << "  Encrypted average: " << encSaveAvg << std::endl;
-            std::cout << "  Unencrypted average: " << unencSaveAvg << std::endl;
-            std::cout << "  Encryption overhead: " << (saveImpact > 0 ? "+" : "") << saveImpact << "%" << std::endl;
-            std::cout << std::endl;
-
-            std::cout << "Load operations (microseconds):" << std::endl;
-            std::cout << "  Encrypted average: " << encLoadAvg << std::endl;
-            std::cout << "  Unencrypted average: " << unencLoadAvg << std::endl;
-            std::cout << "  Encryption overhead: " << (loadImpact > 0 ? "+" : "") << loadImpact << "%" << std::endl;
-            std::cout << "=============================================" << std::endl;
-
-            // Also measure file size difference
-            std::uintmax_t encryptedSize = std::filesystem::file_size(encryptedFilename);
-            std::uintmax_t unencryptedSize = std::filesystem::file_size(unencryptedFilename);
-            double sizeImpact = ((double)encryptedSize / unencryptedSize - 1.0) * 100.0;
-
-            std::cout << "File size comparison:" << std::endl;
-            std::cout << "  Encrypted: " << encryptedSize << " bytes" << std::endl;
-            std::cout << "  Unencrypted: " << unencryptedSize << " bytes" << std::endl;
-            std::cout << "  Size overhead: " << (sizeImpact > 0 ? "+" : "") << sizeImpact << "%" << std::endl;
-            std::cout << "=============================================" << std::endl;
-        }
-        catch (const std::exception &e)
-        {
-            // Clean up in exception path
-            try
-            {
-                if (std::filesystem::exists(encryptedFilename))
-                    std::filesystem::remove(encryptedFilename);
-                if (std::filesystem::exists(unencryptedFilename))
-                    std::filesystem::remove(unencryptedFilename);
-            }
-            catch (...)
-            { /* Ignore cleanup errors */
-            }
-
-            FAIL() << "Unexpected exception: " << e.what();
-        }
-
-        // Clean up in normal path
-        try
-        {
-            if (std::filesystem::exists(encryptedFilename))
-                std::filesystem::remove(encryptedFilename);
-            if (std::filesystem::exists(unencryptedFilename))
-                std::filesystem::remove(unencryptedFilename);
-        }
-        catch (...)
-        { /* Ignore cleanup errors */
-        }
+        return static_cast<double>(std::accumulate(timings.begin(), timings.end(), 0LL)) /
+               static_cast<double>(timings.size());
     }
-} // namespace datacoe
+
+    void print_stats(const std::string &title, std::vector<long long> timings)
+    {
+        std::ranges::sort(timings);
+
+        std::cout << title << " (microseconds):" << std::endl;
+        std::cout << "  Average: " << average(timings) << std::endl;
+        std::cout << "  Median: " << timings[timings.size() / 2] << std::endl;
+        std::cout << "  95th percentile: " << timings[timings.size() * 95 / 100] << std::endl;
+        std::cout << "  Min: " << timings.front() << std::endl;
+        std::cout << "  Max: " << timings.back() << std::endl;
+    }
+
+    double overhead_percent(double measured, double baseline)
+    {
+        return (measured / baseline - 1.0) * 100.0;
+    }
+} // namespace
+
+//==============================================================================
+//                  PerformanceTests - save and load benchmarks
+//==============================================================================
+
+class PerformanceTests : public ::testing::Test
+{
+protected:
+    temp_dir m_dir;
+};
+
+//==============================================================================
+//                            Save and Load Timing
+//==============================================================================
+
+TEST_F(PerformanceTests, SavePerformance)
+{
+    constexpr int iterations = 100;
+    const auto path = m_dir / "perf.json";
+    std::vector<long long> timings;
+
+    // Test 1: save with slightly different data each time
+    player_save data{"PerformanceTest", 10000, {}};
+    for (int i = 0; i < iterations; ++i)
+    {
+        data.highscore = 10000 + i;
+        timings.push_back(timed_save(path, data));
+    }
+
+    print_stats("Save Performance", timings);
+
+    // Test 2: the last save is what's on disk
+    const auto loaded = load<player_save>(path);
+    ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
+    EXPECT_EQ(*loaded, data);
+}
+
+TEST_F(PerformanceTests, LoadPerformance)
+{
+    constexpr int iterations = 100;
+    const auto path = m_dir / "perf.json";
+    const player_save data{"PerformanceTest", 10000, {}};
+    std::vector<long long> timings;
+
+    // Test 1: load the same file over and over
+    const auto saved = save(path, data);
+    ASSERT_TRUE(saved.has_value()) << saved.error().message;
+
+    for (int i = 0; i < iterations; ++i)
+        timings.push_back(timed_load(path, data));
+
+    print_stats("Load Performance", timings);
+}
+
+//==============================================================================
+//                                 Stress Test
+//==============================================================================
+
+TEST_F(PerformanceTests, StressTest)
+{
+    constexpr int iterations = 500;
+    const auto path = m_dir / "stress.json";
+    const std::vector<std::string> names = {"Player1", "Player2", "Player3", "Gamer", "Pro", "Noob", "Champion"};
+
+    std::mt19937 gen(42);
+    std::uniform_int_distribution<> operation_dist(0, 2); // 0=save, 1=load, 2=new game
+    std::uniform_int_distribution<> score_dist(0, 100000);
+    std::uniform_int_distribution<> name_dist(0, static_cast<int>(names.size()) - 1);
+
+    // Test 1: random mix of saves, loads and new games, every load matches the last save
+    player_save last_saved;
+    {
+        const auto saved = save(path, last_saved);
+        ASSERT_TRUE(saved.has_value()) << saved.error().message;
+    }
+
+    const auto start = std::chrono::steady_clock::now();
+
+    for (int i = 0; i < iterations; ++i)
+    {
+        const int operation = operation_dist(gen);
+
+        if (operation == 1)
+        {
+            const auto loaded = load<player_save>(path);
+            ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
+            EXPECT_EQ(*loaded, last_saved);
+            continue;
+        }
+
+        last_saved = operation == 0 ? player_save{names[static_cast<std::size_t>(name_dist(gen))], score_dist(gen), {}}
+                                    : player_save{};
+        const auto saved = save(path, last_saved);
+        ASSERT_TRUE(saved.has_value()) << saved.error().message;
+    }
+
+    const auto total_ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+
+    std::cout << "Stress Test Results:" << std::endl;
+    std::cout << "  Total time for " << iterations << " operations: " << total_ms << "ms" << std::endl;
+    std::cout << "  Average time per operation: " << (static_cast<double>(total_ms) * 1000.0 / iterations) << "us"
+              << std::endl;
+
+    // Test 2: still works after the stress
+    {
+        const player_save final_data{"FinalCheck", 12345, {}};
+        timed_save(path, final_data);
+        timed_load(path, final_data);
+    }
+}
+
+//==============================================================================
+//                                  Encryption
+//==============================================================================
+
+TEST_F(PerformanceTests, EncryptedPerformanceComparison)
+{
+    constexpr int iterations = 50;
+    const auto encrypted_path = m_dir / "perf.sav";
+    const auto plain_path = m_dir / "perf.json";
+
+    std::vector<long long> encrypted_saves;
+    std::vector<long long> plain_saves;
+    std::vector<long long> encrypted_loads;
+    std::vector<long long> plain_loads;
+
+    // Test 1: save and load the same data both ways
+    player_save data{"PerformanceTest", 12345, {}};
+    for (int i = 0; i < iterations; ++i)
+    {
+        data.highscore = 12345 + i;
+        encrypted_saves.push_back(timed_save(encrypted_path, data, true));
+        plain_saves.push_back(timed_save(plain_path, data));
+    }
+
+    for (int i = 0; i < iterations; ++i)
+    {
+        encrypted_loads.push_back(timed_load(encrypted_path, data));
+        plain_loads.push_back(timed_load(plain_path, data));
+    }
+
+    // Test 2: only the encrypted file has the prefix
+    EXPECT_TRUE(read_text(encrypted_path).starts_with("DATACOE_ENCRYPTED"));
+    EXPECT_FALSE(read_text(plain_path).starts_with("DATACOE_ENCRYPTED"));
+
+    const double save_overhead = overhead_percent(average(encrypted_saves), average(plain_saves));
+    const double load_overhead = overhead_percent(average(encrypted_loads), average(plain_loads));
+
+    std::error_code ec;
+    const auto encrypted_size = static_cast<double>(std::filesystem::file_size(encrypted_path, ec));
+    const auto plain_size = static_cast<double>(std::filesystem::file_size(plain_path, ec));
+
+    std::cout << "=============================================" << std::endl;
+    std::cout << "     Encryption Performance Comparison" << std::endl;
+    std::cout << "=============================================" << std::endl;
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << "Save operations (microseconds):" << std::endl;
+    std::cout << "  Encrypted average: " << average(encrypted_saves) << std::endl;
+    std::cout << "  Plain average: " << average(plain_saves) << std::endl;
+    std::cout << "  Encryption overhead: " << save_overhead << "%" << std::endl;
+    std::cout << "Load operations (microseconds):" << std::endl;
+    std::cout << "  Encrypted average: " << average(encrypted_loads) << std::endl;
+    std::cout << "  Plain average: " << average(plain_loads) << std::endl;
+    std::cout << "  Encryption overhead: " << load_overhead << "%" << std::endl;
+    std::cout << "File size (bytes):" << std::endl;
+    std::cout << "  Encrypted: " << encrypted_size << std::endl;
+    std::cout << "  Plain: " << plain_size << std::endl;
+    std::cout << "  Size overhead: " << overhead_percent(encrypted_size, plain_size) << "%" << std::endl;
+    std::cout << "=============================================" << std::endl;
+}

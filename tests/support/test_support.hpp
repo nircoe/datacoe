@@ -1,7 +1,9 @@
 #pragma once
 
+#include <datacoe/utils/error.hpp>
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
+#include <expected>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -103,6 +105,20 @@ namespace datacoe_test
 
         std::filesystem::path operator/(const std::string &name) const { return m_path / name; }
     };
+
+    template <typename T>
+    void expect_error(const std::expected<T, datacoe::error> &result, datacoe::error_code code)
+    {
+        ASSERT_FALSE(result.has_value());
+        EXPECT_EQ(result.error().code, code);
+    }
+
+    inline std::filesystem::path tmp_path(const std::filesystem::path &path)
+    {
+        auto tmp = path;
+        tmp += ".tmp";
+        return tmp;
+    }
 
     inline std::string read_text(const std::filesystem::path &path)
     {

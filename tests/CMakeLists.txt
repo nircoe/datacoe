@@ -3,16 +3,13 @@ enable_testing()
 datacoe_ignore_external_warnings(testcoe_headers)
 
 set(TEST_FILES
-    data_manager_tests.cpp
-    data_reader_writer_tests.cpp
-    game_data_tests.cpp
-    integration_tests.cpp
-    performance_tests.cpp
-    memory_tests.cpp
-    error_handling_tests.cpp
-    save_load_tests.cpp
     saveable_tests.cpp
     utils/io_tests.cpp
+    save_load_tests.cpp
+    integration_tests.cpp
+    error_handling_tests.cpp
+    memory_tests.cpp
+    performance_tests.cpp
 )
 
 add_executable(datacoe_tests

@@ -12,17 +12,17 @@ int printHelp()
     std::cout << "  --test=SUITE.TEST Run only the specified test" << std::endl;
     std::cout << std::endl;
     std::cout << "Available test suites:" << std::endl;
-    std::cout << "  DataManagerTest          - DataManager high-level API tests" << std::endl;
-    std::cout << "  DataReaderWriterTest     - File I/O and encryption/decryption tests" << std::endl;
-    std::cout << "  GameDataTest             - GameData model and serialization tests" << std::endl;
-    std::cout << "  IntegrationTest          - Cross-class integration tests" << std::endl;
-    std::cout << "  PerformanceTest          - Performance benchmarks" << std::endl;
-    std::cout << "  MemoryTest               - Memory usage tests" << std::endl;
-    std::cout << "  ErrorHandlingTest        - Error handling and recovery tests" << std::endl;
+    std::cout << "  SaveableTests            - Saveable concept tests" << std::endl;
+    std::cout << "  IoTests                  - Internal file I/O and encryption/decryption tests" << std::endl;
+    std::cout << "  SaveLoadTests            - Save and load API tests" << std::endl;
+    std::cout << "  IntegrationTests         - Save and load workflow tests" << std::endl;
+    std::cout << "  ErrorHandlingTests       - Error handling and recovery tests" << std::endl;
+    std::cout << "  MemoryTests              - Memory usage tests" << std::endl;
+    std::cout << "  PerformanceTests         - Performance benchmarks" << std::endl;
     std::cout << std::endl;
     std::cout << "Example usage:" << std::endl;
-    std::cout << "  ./datacoe_tests --suite=DataManagerTest" << std::endl;
-    std::cout << "  ./datacoe_tests --test=GameDataTest.DefaultConstructor" << std::endl;
+    std::cout << "  ./datacoe_tests --suite=SaveLoadTests" << std::endl;
+    std::cout << "  ./datacoe_tests --test=SaveLoadTests.PlainRoundTrip" << std::endl;
     return 0;
 }
 
@@ -33,8 +33,8 @@ int main(int argc, char **argv)
     std::cout << "====================================================" << std::endl;
     std::cout << std::endl;
     std::cout << "Comprehensive testing for datacoe." << std::endl;
-    std::cout << "Testing Core Module: data_manager, data_reader_writer, game_data" << std::endl;
-    std::cout << "Testing Cross-Cutting: integration, performance, memory, error handling" << std::endl;
+    std::cout << "Testing Core Module: saveable, io, save_load" << std::endl;
+    std::cout << "Testing Cross-Cutting: integration, error handling, memory, performance" << std::endl;
     std::cout << std::endl;
 
     bool askForAll = false;

@@ -3,7 +3,6 @@
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 #include <climits>
-#include <expected>
 #include <filesystem>
 #include <string>
 #include <system_error>
@@ -13,20 +12,6 @@ using namespace datacoe_test;
 
 namespace
 {
-    template <typename T>
-    void expect_error(const std::expected<T, error> &result, error_code code)
-    {
-        ASSERT_FALSE(result.has_value());
-        EXPECT_EQ(result.error().code, code);
-    }
-
-    std::filesystem::path tmp_path(const std::filesystem::path &path)
-    {
-        auto tmp = path;
-        tmp += ".tmp";
-        return tmp;
-    }
-
     void expect_round_trip(const std::filesystem::path &path, const player_save &data, bool encrypt = false)
     {
         const auto saved = save(path, data, encrypt);

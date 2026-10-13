@@ -1,7 +1,6 @@
 #include <datacoe/save_load.hpp>
 #include <support/test_support.hpp>
 #include <gtest/gtest.h>
-#include <expected>
 #include <filesystem>
 #include <string>
 #include <system_error>
@@ -12,20 +11,6 @@ using namespace datacoe_test;
 
 namespace
 {
-    template <typename T>
-    void expect_error(const std::expected<T, error> &result, error_code code)
-    {
-        ASSERT_FALSE(result.has_value());
-        EXPECT_EQ(result.error().code, code);
-    }
-
-    std::filesystem::path tmp_path(const std::filesystem::path &path)
-    {
-        auto tmp = path;
-        tmp += ".tmp";
-        return tmp;
-    }
-
     void expect_loads(const std::filesystem::path &path, const player_save &expected)
     {
         const auto loaded = load<player_save>(path);
