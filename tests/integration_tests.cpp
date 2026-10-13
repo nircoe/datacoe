@@ -111,7 +111,7 @@ TEST_F(IntegrationTests, EncryptionToggleLifecycle)
         const player_save data{"cycle", i, {i}};
 
         expect_round_trip(path, data, encrypt);
-        EXPECT_EQ(read_text(path).starts_with("DATACOE_ENCRYPTED"), encrypt);
+        EXPECT_EQ(read_text(path).starts_with(ENCRYPTED_PREFIX), encrypt);
     }
 }
 
@@ -137,7 +137,7 @@ TEST_F(IntegrationTests, CorruptionRecovery)
         const auto path = m_dir / "encrypted.sav";
         expect_round_trip(path, player_save{"valid", 100, {}}, true);
 
-        write_text(path, "DATACOE_ENCRYPTED");
+        write_text(path, ENCRYPTED_PREFIX);
         EXPECT_FALSE(load<player_save>(path).has_value());
 
         expect_round_trip(path, player_save{"recovered", 300, {}}, true);

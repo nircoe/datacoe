@@ -39,7 +39,7 @@ TEST_F(IoTests, IsFileEncrypted)
     // Test 2: the prefix alone is enough, no CryptoPP involved
     {
         const auto path = m_dir / "prefix_only.dat";
-        write_text(path, "DATACOE_ENCRYPTED");
+        write_text(path, ENCRYPTED_PREFIX);
 
         const auto result = internal::is_file_encrypted(path);
         ASSERT_TRUE(result.has_value()) << result.error().message;
@@ -127,7 +127,7 @@ TEST_F(IoTests, EncryptDecrypt)
         {
             const auto encrypted = internal::encrypt(text);
             ASSERT_TRUE(encrypted.has_value()) << encrypted.error().message;
-            EXPECT_TRUE(encrypted->starts_with("DATACOE_ENCRYPTED"));
+            EXPECT_TRUE(encrypted->starts_with(ENCRYPTED_PREFIX));
 
             const auto decrypted = internal::decrypt(*encrypted);
             ASSERT_TRUE(decrypted.has_value()) << decrypted.error().message;

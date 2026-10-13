@@ -98,7 +98,7 @@ TEST_F(SaveLoadTests, EncryptedRoundTrip)
         expect_round_trip(path, data, true);
 
         const auto text = read_text(path);
-        EXPECT_TRUE(text.starts_with("DATACOE_ENCRYPTED"));
+        EXPECT_TRUE(text.starts_with(ENCRYPTED_PREFIX));
         EXPECT_EQ(text.find("secret_nickname"), std::string::npos);
     }
 }
@@ -110,13 +110,13 @@ TEST_F(SaveLoadTests, EncryptionSwitching)
     // Test 1: plain, then encrypted, then plain again on the same path
     {
         expect_round_trip(path, player_save{"plain", 1, {}});
-        EXPECT_FALSE(read_text(path).starts_with("DATACOE_ENCRYPTED"));
+        EXPECT_FALSE(read_text(path).starts_with(ENCRYPTED_PREFIX));
 
         expect_round_trip(path, player_save{"encrypted", 2, {}}, true);
-        EXPECT_TRUE(read_text(path).starts_with("DATACOE_ENCRYPTED"));
+        EXPECT_TRUE(read_text(path).starts_with(ENCRYPTED_PREFIX));
 
         expect_round_trip(path, player_save{"plain again", 3, {}});
-        EXPECT_FALSE(read_text(path).starts_with("DATACOE_ENCRYPTED"));
+        EXPECT_FALSE(read_text(path).starts_with(ENCRYPTED_PREFIX));
     }
 }
 

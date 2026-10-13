@@ -132,6 +132,8 @@ namespace datacoe_test
         file.write(text.data(), static_cast<std::streamsize>(text.size()));
     }
 
+    inline const std::string ENCRYPTED_PREFIX = "DATACOE_ENCRYPTED";
+
     // Real encrypted save from the first datacoe format, it has to keep decrypting
     inline const std::string GOLDEN_ENCRYPTED_SAVE =
         "DATACOE_ENCRYPTED"

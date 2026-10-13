@@ -1,12 +1,11 @@
 #include <datacoe/save_load.hpp>
 #include <support/test_support.hpp>
 #include <gtest/gtest.h>
-#include <algorithm>
-#include <cstddef>
 #include <filesystem>
 #include <format>
+#include <iterator>
+#include <numeric>
 #include <string>
-#include <vector>
 
 using namespace datacoe;
 using namespace datacoe_test;
@@ -33,16 +32,14 @@ TEST_F(MemoryTests, RepeatedSaveLoad)
     // Test 1: save and load the same path over and over, the last value wins
     for (int i = 0; i < iterations; ++i)
     {
-        const auto saved = save(path, player_save{"MemoryTest", i, {i}});
+        const player_save expected{"MemoryTest", i, {i}};
+        const auto saved = save(path, expected);
         ASSERT_TRUE(saved.has_value()) << saved.error().message;
 
         const auto loaded = load<player_save>(path);
         ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
+        EXPECT_EQ(*loaded, expected);
     }
-
-    const auto final_load = load<player_save>(path);
-    ASSERT_TRUE(final_load.has_value()) << final_load.error().message;
-    EXPECT_EQ(*final_load, (player_save{"MemoryTest", iterations - 1, {iterations - 1}}));
 }
 
 //==============================================================================
@@ -53,8 +50,7 @@ TEST_F(MemoryTests, LargePayload)
 {
     player_save data{std::string(1024 * 1024, 'A'), 999999, {}};
     data.unlocked.resize(100000);
-    for (std::size_t i = 0; i < data.unlocked.size(); ++i)
-        data.unlocked[i] = static_cast<int>(i);
+    std::iota(data.unlocked.begin(), data.unlocked.end(), 0);
 
     // Test 1: 1 MB nickname and 100k unlocked entries
     {
@@ -74,7 +70,7 @@ TEST_F(MemoryTests, LargePayload)
 
         const auto saved = save(path, data, true);
         ASSERT_TRUE(saved.has_value()) << saved.error().message;
-        EXPECT_TRUE(read_text(path).starts_with("DATACOE_ENCRYPTED"));
+        EXPECT_TRUE(read_text(path).starts_with(ENCRYPTED_PREFIX));
 
         const auto loaded = load<player_save>(path);
         ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
@@ -89,31 +85,24 @@ TEST_F(MemoryTests, LargePayload)
 TEST_F(MemoryTests, ManyFiles)
 {
     constexpr int file_count = 100;
-    std::vector<std::string> expected_names;
 
     // Test 1: every file holds its own data
     for (int i = 0; i < file_count; ++i)
     {
-        const auto name = std::format("slot_{}.json", i);
-        expected_names.push_back(name);
-
-        const auto saved = save(m_dir / name, player_save{std::format("player_{}", i), i, {i, i + 1}});
+        const auto saved =
+            save(m_dir / std::format("slot_{}.json", i), player_save{std::format("player_{}", i), i, {i, i + 1}});
         ASSERT_TRUE(saved.has_value()) << saved.error().message;
     }
 
     for (int i = 0; i < file_count; ++i)
     {
-        const auto loaded = load<player_save>(m_dir / expected_names[static_cast<std::size_t>(i)]);
+        const auto loaded = load<player_save>(m_dir / std::format("slot_{}.json", i));
         ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
         EXPECT_EQ(*loaded, (player_save{std::format("player_{}", i), i, {i, i + 1}}));
     }
 
-    // Test 2: the directory holds exactly those files, no .tmp leftovers
-    std::vector<std::string> found_names;
-    for (const auto &entry : std::filesystem::directory_iterator(m_dir.path()))
-        found_names.push_back(entry.path().filename().string());
-
-    std::ranges::sort(expected_names);
-    std::ranges::sort(found_names);
-    EXPECT_EQ(found_names, expected_names);
+    // Test 2: the directory holds exactly those files, a leftover .tmp would add one
+    const auto entries = std::distance(std::filesystem::directory_iterator(m_dir.path()),
+                                       std::filesystem::directory_iterator());
+    EXPECT_EQ(entries, file_count);
 }

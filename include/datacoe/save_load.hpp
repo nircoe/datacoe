@@ -7,7 +7,6 @@
 #include <exception>
 #include <expected>
 #include <filesystem>
-#include <format>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -37,7 +36,8 @@ namespace datacoe
             }
             catch (const std::exception &e)
             {
-                return std::unexpected(error{error_code::serialization_failure, std::format("{}: {}", NAME, e.what())});
+                return std::unexpected(
+                    internal::with_prefix(NAME, error{error_code::serialization_failure, e.what()}));
             }
 
             if (encrypt)
@@ -97,7 +97,7 @@ namespace datacoe
             }
             catch (const std::exception &e)
             {
-                return std::unexpected(error{error_code::parse_failure, std::format("{}: {}", NAME, e.what())});
+                return std::unexpected(internal::with_prefix(NAME, error{error_code::parse_failure, e.what()}));
             }
 
             try
@@ -107,7 +107,7 @@ namespace datacoe
             catch (const std::exception &e)
             {
                 return std::unexpected(
-                    error{error_code::deserialization_failure, std::format("{}: {}", NAME, e.what())});
+                    internal::with_prefix(NAME, error{error_code::deserialization_failure, e.what()}));
             }
         }
         else

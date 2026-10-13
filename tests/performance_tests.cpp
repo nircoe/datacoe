@@ -214,8 +214,8 @@ TEST_F(PerformanceTests, EncryptedPerformanceComparison)
     }
 
     // Test 2: only the encrypted file has the prefix
-    EXPECT_TRUE(read_text(encrypted_path).starts_with("DATACOE_ENCRYPTED"));
-    EXPECT_FALSE(read_text(plain_path).starts_with("DATACOE_ENCRYPTED"));
+    EXPECT_TRUE(read_text(encrypted_path).starts_with(ENCRYPTED_PREFIX));
+    EXPECT_FALSE(read_text(plain_path).starts_with(ENCRYPTED_PREFIX));
 
     const double save_overhead = overhead_percent(average(encrypted_saves), average(plain_saves));
     const double load_overhead = overhead_percent(average(encrypted_loads), average(plain_loads));

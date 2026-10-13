@@ -80,7 +80,7 @@ TEST_F(ErrorHandlingTests, CorruptFiles)
 
         // The prefix plus the first base64 line (72 chars) decodes to a size that isn't a multiple of the block size
         const auto text = read_text(path);
-        write_text(path, text.substr(0, 17 + 72));
+        write_text(path, text.substr(0, ENCRYPTED_PREFIX.size() + 72));
 
         expect_error(load<player_save>(path), error_code::decryption_failure);
         expect_resave_recovers(path, true);

@@ -5,7 +5,6 @@
 #include <cryptopp/osrng.h>
 #include <cryptopp/base64.h>
 #include <cstddef>
-#include <cstring>
 #include <exception>
 #include <format>
 #include <fstream>
@@ -49,11 +48,8 @@ namespace datacoe
 
                 return {};
             }
-        } // namespace
 
-        std::expected<bool, error> is_file_encrypted(const std::filesystem::path &path)
-        {
-            try
+            std::expected<std::ifstream, error> open_for_read(const std::filesystem::path &path)
             {
                 const auto readable = check_readable_file(path);
                 if (!readable)
@@ -64,13 +60,26 @@ namespace datacoe
                     return std::unexpected(
                         error{error_code::file_read_failure, std::format("could not open file: {}", path_text(path))});
 
-                std::string header(ENCRYPTION_PREFIX.size(), '\0');
-                file.read(header.data(), static_cast<std::streamsize>(header.size()));
-                if (file.bad())
+                return file;
+            }
+        } // namespace
+
+        std::expected<bool, error> is_file_encrypted(const std::filesystem::path &path)
+        {
+            try
+            {
+                auto file = open_for_read(path);
+                if (!file)
+                    return std::unexpected(file.error());
+
+                char header[ENCRYPTION_PREFIX.size()];
+                file->read(header, static_cast<std::streamsize>(ENCRYPTION_PREFIX.size()));
+                if (file->bad())
                     return std::unexpected(
                         error{error_code::file_read_failure, std::format("could not read file: {}", path_text(path))});
 
-                return static_cast<std::size_t>(file.gcount()) == header.size() && header == ENCRYPTION_PREFIX;
+                return static_cast<std::size_t>(file->gcount()) == ENCRYPTION_PREFIX.size() &&
+                       std::string_view(header, ENCRYPTION_PREFIX.size()) == ENCRYPTION_PREFIX;
             }
             catch (const std::exception &e)
             {
@@ -87,22 +96,20 @@ namespace datacoe
                 rng.GenerateBlock(iv, CryptoPP::AES::BLOCKSIZE);
 
                 // The filters take ownership of the raw pointers, that's the CryptoPP API
-                std::string ciphertext;
+                // StringSink appends, so the IV goes first and the ciphertext lands right after it
+                std::string combined(reinterpret_cast<const char *>(iv), CryptoPP::AES::BLOCKSIZE);
                 CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encryption(FIXED_KEY, CryptoPP::AES::DEFAULT_KEYLENGTH,
                                                                          iv);
                 CryptoPP::StringSource ss1(
                     plaintext, true,
-                    new CryptoPP::StreamTransformationFilter(encryption, new CryptoPP::StringSink(ciphertext)));
-
-                std::string combined(reinterpret_cast<const char *>(iv), CryptoPP::AES::BLOCKSIZE);
-                combined += ciphertext;
+                    new CryptoPP::StreamTransformationFilter(encryption, new CryptoPP::StringSink(combined)));
 
                 // The default Base64Encoder adds a line break every 72 chars. Keep it, old saves have them
-                std::string encoded;
+                std::string encoded(ENCRYPTION_PREFIX);
                 CryptoPP::StringSource ss2(combined, true,
                                            new CryptoPP::Base64Encoder(new CryptoPP::StringSink(encoded)));
 
-                return std::string(ENCRYPTION_PREFIX) + encoded;
+                return encoded;
             }
             catch (const std::exception &e)
             {
@@ -118,21 +125,20 @@ namespace datacoe
                     return std::unexpected(error{error_code::decryption_failure, "missing encryption prefix"});
 
                 std::string decoded;
-                CryptoPP::StringSource ss1(file_contents.substr(ENCRYPTION_PREFIX.size()), true,
-                                           new CryptoPP::Base64Decoder(new CryptoPP::StringSink(decoded)));
+                CryptoPP::StringSource ss1(
+                    reinterpret_cast<const CryptoPP::byte *>(file_contents.data()) + ENCRYPTION_PREFIX.size(),
+                    file_contents.size() - ENCRYPTION_PREFIX.size(), true,
+                    new CryptoPP::Base64Decoder(new CryptoPP::StringSink(decoded)));
 
                 if (decoded.size() <= CryptoPP::AES::BLOCKSIZE)
                     return std::unexpected(error{error_code::decryption_failure, "encrypted data is too short"});
 
-                CryptoPP::byte iv[CryptoPP::AES::BLOCKSIZE];
-                std::memcpy(iv, decoded.data(), CryptoPP::AES::BLOCKSIZE);
-                const std::string ciphertext = decoded.substr(CryptoPP::AES::BLOCKSIZE);
-
+                const auto *bytes = reinterpret_cast<const CryptoPP::byte *>(decoded.data());
                 std::string plaintext;
                 CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decryption(FIXED_KEY, CryptoPP::AES::DEFAULT_KEYLENGTH,
-                                                                         iv);
+                                                                         bytes);
                 CryptoPP::StringSource ss2(
-                    ciphertext, true,
+                    bytes + CryptoPP::AES::BLOCKSIZE, decoded.size() - CryptoPP::AES::BLOCKSIZE, true,
                     new CryptoPP::StreamTransformationFilter(decryption, new CryptoPP::StringSink(plaintext)));
 
                 return plaintext;
@@ -147,17 +153,12 @@ namespace datacoe
         {
             try
             {
-                const auto readable = check_readable_file(path);
-                if (!readable)
-                    return std::unexpected(readable.error());
+                auto file = open_for_read(path);
+                if (!file)
+                    return std::unexpected(file.error());
 
-                std::ifstream file(path, std::ios::binary);
-                if (!file.is_open())
-                    return std::unexpected(
-                        error{error_code::file_read_failure, std::format("could not open file: {}", path_text(path))});
-
-                std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-                if (file.bad())
+                std::string contents((std::istreambuf_iterator<char>(*file)), std::istreambuf_iterator<char>());
+                if (file->bad())
                     return std::unexpected(
                         error{error_code::file_read_failure, std::format("could not read file: {}", path_text(path))});
 
@@ -190,12 +191,10 @@ namespace datacoe
                                                  std::format("could not open file: {}", path_text(tmp))});
 
                 file.write(contents.data(), static_cast<std::streamsize>(contents.size()));
-                file.flush();
-                const bool written = file.good();
                 file.close();
 
                 std::error_code ec;
-                if (!written || file.fail())
+                if (file.fail())
                 {
                     std::filesystem::remove(tmp, ec);
                     return std::unexpected(error{error_code::file_write_failure,
