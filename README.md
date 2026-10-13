@@ -9,9 +9,8 @@ It provides functionalities for data persistence, serialization, and encryption.
 
 ## Current State - Refactoring towards a Generic Data API
 
-This README describes the current `main` branch. datacoe is being refactored towards a generic,
-templated save/load API (in the `refactor/generic_data` branch), so parts of this README will be
-stale until that refactor lands.
+The generic, templated `save`/`load` API has landed. The library no longer ships its own data type.
+A full README rewrite is still pending, so parts of this README outside the API sections may be stale.
 
 ---
 
@@ -57,32 +56,28 @@ The library offers a base implementation for data management tasks, including:
 
 ## Architecture
 
-The library follows a layered architecture:
+The library is a header-only `save`/`load` API on top of a small compiled I/O layer:
 
 ```
 ┌─────────────────────────────────────┐
-│           Game Application          │
-└───────────────┬─────────────────────┘
-                │
-┌───────────────▼─────────────────────┐
-│           DataManager               │
-│  (High-level data management API)   │
-└───────────────┬─────────────────────┘
-                │
-┌───────────────▼─────────────────────┐
-│         DataReaderWriter            │
-│    (File I/O and Encryption)        │
-└───────────────┬─────────────────────┘
-                │
-┌───────────────▼─────────────────────┐
-│            GameData                 │
-│      (Data Structure Model)         │
+│        Your saveable struct         │
+│       (defined in your game)        │
+└──────────────────┬──────────────────┘
+                   │
+┌──────────────────▼──────────────────┐
+│             save / load             │
+│       (datacoe/save_load.hpp)       │
+└──────────────────┬──────────────────┘
+                   │
+┌──────────────────▼──────────────────┐
+│     Internal I/O and AES layer      │
+│     (src/datacoe/utils/io.cpp)      │
 └─────────────────────────────────────┘
 ```
 
-- **GameData**: Core data model with serialization/deserialization
-- **DataReaderWriter**: Handles reading/writing and encryption/decryption
-- **DataManager**: Provides high-level interface for game integration
+- `datacoe/save_load.hpp` is the only header you include
+- Any struct that is default constructible, copyable and has nlohmann/json `to_json`/`from_json` is `saveable`
+- The I/O layer (`datacoe::internal`) is not public API
 
 [Back to top](#table-of-contents)
 
@@ -109,7 +104,7 @@ cmake -DDATACOE_BUILD_TESTS=ON ..
 cmake --build .
 
 # Run tests (only built with DATACOE_BUILD_TESTS=ON)
-./tests/all_tests
+./tests/datacoe_tests
 ```
 
 Dependencies are downloaded with FetchContent at configure time, so the first configure needs network access.
@@ -122,7 +117,8 @@ Dependencies are downloaded with FetchContent at configure time, so the first co
 
 2. **Modify the Files:**
 
-   Modify the `GameData.hpp/cpp` and `DataManager.hpp/cpp` files to include your game's data structures and logic.
+   You don't edit any library files. Define your own `saveable` struct in your game (see
+   [Your own data](#your-own-data)).
 
 3. **Add to Your Project with FetchContent:**
 
@@ -144,90 +140,85 @@ Dependencies are downloaded with FetchContent at configure time, so the first co
 
 ## API Overview and Examples
 
-### Core Components
+### Define a saveable struct
 
-The library consists of three main components:
-
-1. **GameData**: Represents the game's save data structure
-2. **DataReaderWriter**: Handles low-level file I/O, encryption, and decryption
-3. **DataManager**: High-level interface for managing game data (recommended entry point)
-
-### Basic Usage Examples
-
-#### Initialize and Save Game Data
+Define your own struct and add one macro line right after it, at namespace scope in the same namespace:
 
 ```cpp
-#include <datacoe/data_manager.hpp>
+#include <datacoe/save_load.hpp>
+#include <string>
+#include <vector>
 
-datacoe::DataManager manager;
-bool loadSuccess = manager.init("save_game.json");
-// Note: When init() returns false, it indicates no existing save was found,
-// and a new default GameData instance was created internally
-
-// Create and set game data
-datacoe::GameData gameData;
-gameData.setNickname("Player1");
-gameData.setHighscore(1000);
-manager.setGamedata(gameData);
-
-// Save to disk
-bool saveSuccess = manager.saveGame();
+namespace game
+{
+    struct save_data
+    {
+        std::string nickname;
+        int highscore = 0;
+        std::vector<int> unlocked_levels;
+    };
+    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(save_data, nickname, highscore, unlocked_levels)
+}
 ```
 
-#### Load Game Data
+A key missing from an old save falls back to the field's default. Passing a type that is not `saveable` to `save`
+or `load` gives a single `static_assert` message.
+
+### Save
 
 ```cpp
-#include <datacoe/data_manager.hpp>
+game::save_data data{"Player1", 1000, {1, 2}};
 
-datacoe::DataManager manager;
-bool loadSuccess = manager.init("save_game.json");
+// Plain JSON
+auto saved = datacoe::save("save_game.json", data);
 
-// Load from disk (this happens automatically on init, but can be called explicitly)
-manager.loadGame();
-
-// Access game data
-const datacoe::GameData& data = manager.getGamedata();
-std::string playerName = data.getNickname();
-int score = data.getHighscore();
+// AES encrypted
+auto encrypted = datacoe::save("save_game.json", data, true);
 ```
 
-#### Create New Game
+`save` returns `std::expected<void, datacoe::error>`. It writes `<path>.tmp` and then renames it over the target,
+so a crash or a write error never destroys the old save. Power loss is not covered, the standard library has no fsync.
+
+### Load
 
 ```cpp
-#include <datacoe/data_manager.hpp>
-
-datacoe::DataManager manager;
-bool loadSuccess = manager.init("save_game.json");
-
-// Reset to default values
-manager.newGame();
-
-// Create and set initial data
-datacoe::GameData gameData("NewPlayer", 0);
-manager.setGamedata(gameData);
-
-// Save the new game
-manager.saveGame();
+auto loaded = datacoe::load<game::save_data>("save_game.json");
+if (loaded)
+{
+    game::save_data data = *loaded;
+}
+else if (loaded.error().code == datacoe::error_code::file_not_found)
+{
+    // No save yet, start a new game
+    game::save_data data;
+}
+else
+{
+    // Any other failure, loaded.error().message says what went wrong
+}
 ```
 
-### Extending for Your Game
+`load` returns `std::expected<T, datacoe::error>`. Encryption is detected from the file, there is no flag to pass.
 
-To adapt this library for your game, you'll need to modify the core components to fit your specific needs:
+### Your own data
 
-1. **GameData**: 
-   - Update `game_data.hpp` and `game_data.cpp` with your game's data fields
-   - Modify the `toJson()` and `fromJson()` methods to handle your custom data
+Define your struct and add the macro line. That is it, no library files to change.
 
-2. **DataManager**:
-   - Extend `data_manager.hpp` and `data_manager.cpp` if you need additional management functionality
-   - Add game-specific methods for manipulating your custom data
+To store several data types, either compose them into one struct, or use one file per concern (for example
+`settings.json` plus a save slot file). With a composed struct, each nested struct needs its own macro call and
+must be default constructible:
 
-3. **DataReaderWriter**:
-   - Customize encryption/decryption settings if needed
-   - Add additional file formats or I/O methods as required
-
-4. **Tests**:
-   - Update the tests to reflect your data structures and functionality
+```cpp
+namespace game
+{
+    struct everything
+    {
+        save_data save;
+        int volume = 5;
+    };
+    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(everything, save, volume)
+}
+```
 
 [Back to top](#table-of-contents)
 
@@ -272,14 +263,14 @@ To run all tests:
 
 ```bash
 cd build
-./tests/all_tests
+./tests/datacoe_tests
 ```
 
 Filter to a suite or a single test:
 
 ```bash
-./tests/all_tests --suite=DataManagerTest
-./tests/all_tests --test=GameDataTest.DefaultConstructor
+./tests/datacoe_tests --suite=SaveLoadTests
+./tests/datacoe_tests --test=SaveLoadTests.PlainRoundTrip
 ```
 
 To build and run individual test executables, enable the `DATACOE_BUILD_INDIVIDUAL_TESTS` option before `FetchContent_MakeAvailable(datacoe)`:
@@ -299,11 +290,8 @@ When building datacoe standalone, pass it on the command line instead: `cmake -D
 
 ### Customizing Tests
 
-You'll need to modify the test files to match your game's data structures. The test files are located in the `tests/` directory:
-
-1. Update the test fixture classes to match your game data structure
-2. Modify the test cases to use your specific data types and expected values
-3. Add or remove tests as needed for your specific requirements
+The tests use their own test-local `saveable` structs, defined in `tests/support/test_support.hpp`. There is
+nothing game-specific to rewrite.
 
 ### Enabling Tests
 
