@@ -21,84 +21,31 @@ protected:
 };
 
 //==============================================================================
-//                              is_file_encrypted
+//                                is_encrypted
 //==============================================================================
 
-TEST_F(IoTests, IsFileEncrypted)
+TEST_F(IoTests, IsEncrypted)
 {
-    // Test 1: plain JSON file
-    {
-        const auto path = m_dir / "plain.json";
-        write_text(path, GOLDEN_PLAIN_JSON);
-
-        const auto result = internal::is_file_encrypted(path);
-        ASSERT_TRUE(result.has_value()) << result.error().message;
-        EXPECT_FALSE(*result);
-    }
+    // Test 1: plain JSON
+    EXPECT_FALSE(internal::is_encrypted(GOLDEN_PLAIN_JSON));
 
     // Test 2: the prefix alone is enough, no CryptoPP involved
-    {
-        const auto path = m_dir / "prefix_only.dat";
-        write_text(path, ENCRYPTED_PREFIX);
-
-        const auto result = internal::is_file_encrypted(path);
-        ASSERT_TRUE(result.has_value()) << result.error().message;
-        EXPECT_TRUE(*result);
-    }
+    EXPECT_TRUE(internal::is_encrypted(ENCRYPTED_PREFIX));
 
     // Test 3: same length as the prefix but different text
-    {
-        const auto path = m_dir / "almost_prefix.dat";
-        write_text(path, "DATACOE_ENCRYPTEX");
+    EXPECT_FALSE(internal::is_encrypted("DATACOE_ENCRYPTEX"));
 
-        const auto result = internal::is_file_encrypted(path);
-        ASSERT_TRUE(result.has_value()) << result.error().message;
-        EXPECT_FALSE(*result);
-    }
+    // Test 4: empty contents
+    EXPECT_FALSE(internal::is_encrypted(""));
 
-    // Test 4: empty file
-    {
-        const auto path = m_dir / "empty.dat";
-        write_text(path, "");
+    // Test 5: shorter than the prefix
+    EXPECT_FALSE(internal::is_encrypted("DATACOE"));
 
-        const auto result = internal::is_file_encrypted(path);
-        ASSERT_TRUE(result.has_value()) << result.error().message;
-        EXPECT_FALSE(*result);
-    }
-
-    // Test 5: file shorter than the prefix
-    {
-        const auto path = m_dir / "short.dat";
-        write_text(path, "DATACOE");
-
-        const auto result = internal::is_file_encrypted(path);
-        ASSERT_TRUE(result.has_value()) << result.error().message;
-        EXPECT_FALSE(*result);
-    }
-
-    // Test 6: nonexistent file
-    expect_error(internal::is_file_encrypted(m_dir / "missing.dat"), error_code::file_not_found);
-
-    // Test 7: empty path
-    expect_error(internal::is_file_encrypted(std::filesystem::path()), error_code::invalid_argument);
-
-    // Test 8: directory, same result on every platform
-    expect_error(internal::is_file_encrypted(m_dir.path()), error_code::file_read_failure);
-}
-
-TEST_F(IoTests, EncryptedFileDetection)
-{
-    // Test 1: file written from encrypt() output
+    // Test 6: output of encrypt()
     {
         const auto encrypted = internal::encrypt("{}");
         ASSERT_TRUE(encrypted.has_value()) << encrypted.error().message;
-
-        const auto path = m_dir / "encrypted.dat";
-        write_text(path, *encrypted);
-
-        const auto result = internal::is_file_encrypted(path);
-        ASSERT_TRUE(result.has_value()) << result.error().message;
-        EXPECT_TRUE(*result);
+        EXPECT_TRUE(internal::is_encrypted(*encrypted));
     }
 }
 

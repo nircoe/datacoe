@@ -31,6 +31,14 @@ namespace datacoe_test
     };
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(player_save, nickname, highscore, unlocked)
 
+    struct measurement_save
+    {
+        double value = 0.0;
+
+        bool operator==(const measurement_save &) const = default;
+    };
+    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(measurement_save, value)
+
     struct throwing_save
     {
         int value = 0;
@@ -116,7 +124,7 @@ namespace datacoe_test
     inline std::filesystem::path tmp_path(const std::filesystem::path &path)
     {
         auto tmp = path;
-        tmp += ".tmp";
+        tmp += ".datacoe.tmp";
         return tmp;
     }
 

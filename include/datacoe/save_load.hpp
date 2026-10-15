@@ -33,6 +33,11 @@ namespace datacoe
             {
                 const nlohmann::json j = data;
                 text = j.dump();
+
+                // NaN and Inf are dumped as null and binary values as an object. Such a save would write fine
+                // but never load, and it would replace the last good one. The in-memory value still converts
+                // back, so the check has to go through the dumped text.
+                [[maybe_unused]] const auto loaded_back = nlohmann::json::parse(text).get<T>();
             }
             catch (const std::exception &e)
             {
@@ -72,17 +77,11 @@ namespace datacoe
         {
             constexpr std::string_view NAME = "datacoe::load()";
 
-            // The file is opened twice. A writer replacing it between the two opens could pair the old prefix
-            // check with the new contents. Concurrent writers aren't supported, same as for save.
-            const auto is_encrypted = internal::is_file_encrypted(path);
-            if (!is_encrypted)
-                return std::unexpected(internal::with_prefix(NAME, is_encrypted.error()));
-
             auto contents = internal::read_file(path);
             if (!contents)
                 return std::unexpected(internal::with_prefix(NAME, contents.error()));
 
-            if (*is_encrypted)
+            if (internal::is_encrypted(*contents))
             {
                 auto plain = internal::decrypt(*contents);
                 if (!plain)

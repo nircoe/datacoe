@@ -6,12 +6,13 @@
 #include <expected>
 #include <filesystem>
 #include <string>
+#include <string_view>
 
 namespace datacoe
 {
     namespace internal
     {
-        [[nodiscard]] std::expected<bool, error> is_file_encrypted(const std::filesystem::path &path);
+        [[nodiscard]] bool is_encrypted(std::string_view contents);
         [[nodiscard]] std::expected<std::string, error> encrypt(const std::string &plaintext);
         [[nodiscard]] std::expected<std::string, error> decrypt(const std::string &file_contents);
         [[nodiscard]] std::expected<std::string, error> read_file(const std::filesystem::path &path);

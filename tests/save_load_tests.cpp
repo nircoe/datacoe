@@ -4,6 +4,7 @@
 #include <nlohmann/json.hpp>
 #include <climits>
 #include <filesystem>
+#include <limits>
 #include <string>
 #include <system_error>
 
@@ -168,7 +169,7 @@ TEST_F(SaveLoadTests, ErrorMapping)
     {
         const auto result = load<player_save>(m_dir / "missing.json");
 
-        expect_error(result, error_code::file_not_found);
+        ASSERT_NO_FATAL_FAILURE(expect_error(result, error_code::file_not_found));
         EXPECT_TRUE(result.error().message.starts_with("datacoe::load()"));
     }
 
@@ -179,7 +180,7 @@ TEST_F(SaveLoadTests, ErrorMapping)
 
         const auto result = load<player_save>(path);
 
-        expect_error(result, error_code::parse_failure);
+        ASSERT_NO_FATAL_FAILURE(expect_error(result, error_code::parse_failure));
         EXPECT_TRUE(result.error().message.starts_with("datacoe::load()"));
     }
 
@@ -207,7 +208,7 @@ TEST_F(SaveLoadTests, ErrorMapping)
         const auto path = m_dir / "throwing.json";
         const auto result = save(path, throwing_save{});
 
-        expect_error(result, error_code::serialization_failure);
+        ASSERT_NO_FATAL_FAILURE(expect_error(result, error_code::serialization_failure));
         EXPECT_TRUE(result.error().message.starts_with("datacoe::save()"));
         EXPECT_FALSE(std::filesystem::exists(path));
     }
@@ -231,7 +232,7 @@ TEST_F(SaveLoadTests, ErrorMapping)
     {
         const auto result = save(m_dir / "missing_dir" / "save.json", player_save{});
 
-        expect_error(result, error_code::file_write_failure);
+        ASSERT_NO_FATAL_FAILURE(expect_error(result, error_code::file_write_failure));
         EXPECT_TRUE(result.error().message.starts_with("datacoe::save()"));
     }
 
@@ -295,6 +296,35 @@ TEST_F(SaveLoadTests, FailedWriteKeepsExistingEncryptedSave)
 
         expect_error(save(path, player_save{"\xff", 2, {}}, true), error_code::serialization_failure);
         expect_loads(path, original);
+        EXPECT_FALSE(std::filesystem::exists(tmp_path(path)));
+    }
+}
+
+//==============================================================================
+//                        Values That Can't Be Loaded Back
+//==============================================================================
+
+TEST_F(SaveLoadTests, UnloadableValueIsRejected)
+{
+    const auto path = m_dir / "measurement.json";
+    const measurement_save good{1.5};
+
+    const auto saved = save(path, good);
+    ASSERT_TRUE(saved.has_value()) << saved.error().message;
+
+    // Test 1: NaN is dumped as null, so the save is refused and the old one stays
+    {
+        const auto result = save(path, measurement_save{std::numeric_limits<double>::quiet_NaN()});
+
+        ASSERT_NO_FATAL_FAILURE(expect_error(result, error_code::serialization_failure));
+        EXPECT_TRUE(result.error().message.starts_with("datacoe::save()"));
+    }
+
+    // Test 2: the first save still loads unchanged
+    {
+        const auto loaded = load<measurement_save>(path);
+        ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
+        EXPECT_EQ(*loaded, good);
         EXPECT_FALSE(std::filesystem::exists(tmp_path(path)));
     }
 }

@@ -4,11 +4,10 @@
 #include <cryptopp/filters.h>
 #include <cryptopp/osrng.h>
 #include <cryptopp/base64.h>
-#include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <format>
 #include <fstream>
-#include <iterator>
 #include <string_view>
 #include <system_error>
 
@@ -38,11 +37,16 @@ namespace datacoe
                     return std::unexpected(error{error_code::invalid_argument, "path is empty"});
 
                 std::error_code ec;
-                if (!std::filesystem::exists(path, ec))
+                const auto status = std::filesystem::status(path, ec);
+                if (status.type() == std::filesystem::file_type::not_found)
                     return std::unexpected(
                         error{error_code::file_not_found, std::format("file not found: {}", path_text(path))});
 
-                if (!std::filesystem::is_regular_file(path, ec))
+                if (ec)
+                    return std::unexpected(error{error_code::file_read_failure,
+                                                 std::format("could not stat {}: {}", path_text(path), ec.message())});
+
+                if (!std::filesystem::is_regular_file(status))
                     return std::unexpected(
                         error{error_code::file_read_failure, std::format("not a regular file: {}", path_text(path))});
 
@@ -64,27 +68,9 @@ namespace datacoe
             }
         } // namespace
 
-        std::expected<bool, error> is_file_encrypted(const std::filesystem::path &path)
+        bool is_encrypted(std::string_view contents)
         {
-            try
-            {
-                auto file = open_for_read(path);
-                if (!file)
-                    return std::unexpected(file.error());
-
-                char header[ENCRYPTION_PREFIX.size()];
-                file->read(header, static_cast<std::streamsize>(ENCRYPTION_PREFIX.size()));
-                if (file->bad())
-                    return std::unexpected(
-                        error{error_code::file_read_failure, std::format("could not read file: {}", path_text(path))});
-
-                return static_cast<std::size_t>(file->gcount()) == ENCRYPTION_PREFIX.size() &&
-                       std::string_view(header, ENCRYPTION_PREFIX.size()) == ENCRYPTION_PREFIX;
-            }
-            catch (const std::exception &e)
-            {
-                return std::unexpected(error{error_code::file_read_failure, e.what()});
-            }
+            return contents.starts_with(ENCRYPTION_PREFIX);
         }
 
         std::expected<std::string, error> encrypt(const std::string &plaintext)
@@ -157,8 +143,15 @@ namespace datacoe
                 if (!file)
                     return std::unexpected(file.error());
 
-                std::string contents((std::istreambuf_iterator<char>(*file)), std::istreambuf_iterator<char>());
-                if (file->bad())
+                std::error_code ec;
+                const auto size = std::filesystem::file_size(path, ec);
+                if (ec)
+                    return std::unexpected(
+                        error{error_code::file_read_failure, std::format("could not read file: {}", path_text(path))});
+
+                std::string contents(size, '\0');
+                file->read(contents.data(), static_cast<std::streamsize>(size));
+                if (static_cast<std::uintmax_t>(file->gcount()) != size)
                     return std::unexpected(
                         error{error_code::file_read_failure, std::format("could not read file: {}", path_text(path))});
 
@@ -172,7 +165,10 @@ namespace datacoe
 
         // The old save is only replaced by the final rename, so a crash or a write error never destroys it.
         // A power cut can still leave a partial file after the rename, the standard library has no fsync.
-        // Concurrent saves to the same path share <path>.tmp and are not supported.
+        // <path>.datacoe.tmp is reserved. Concurrent saves to the same path share it and are not supported.
+        // The save is replaced, not written in place. A symlink pointing at the save file itself is not
+        // supported (it becomes a regular file) and the permissions reset to the default. A symlinked
+        // directory works.
         std::expected<void, error> write_file(const std::filesystem::path &path, const std::string &contents)
         {
             try
@@ -183,7 +179,7 @@ namespace datacoe
                         error{error_code::invalid_argument, std::format("path has no file name: {}", path_text(path))});
 
                 auto tmp = path;
-                tmp += ".tmp";
+                tmp += ".datacoe.tmp";
 
                 std::ofstream file(tmp, std::ios::binary | std::ios::trunc);
                 if (!file.is_open())

@@ -2,6 +2,7 @@
 #include <support/test_support.hpp>
 #include <gtest/gtest.h>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -135,6 +136,29 @@ TEST_F(ErrorHandlingTests, ReadOnlyTarget)
 
     const auto result = save(path, updated);
 
+    expect_loads(path, result.has_value() ? updated : original);
+    EXPECT_FALSE(std::filesystem::exists(tmp_path(path)));
+}
+
+TEST_F(ErrorHandlingTests, SaveWhileFileIsOpen)
+{
+    const auto path = m_dir / "open.sav";
+    const player_save original{"original", 1, {}};
+    const player_save updated{"updated", 2, {}};
+
+    const auto first = save(path, original);
+    ASSERT_TRUE(first.has_value()) << first.error().message;
+
+    // On Windows the open handle blocks the replace, on POSIX it succeeds, so only the invariant is checked
+    std::ifstream reader(path, std::ios::binary);
+    ASSERT_TRUE(reader.is_open());
+
+    const auto result = save(path, updated);
+
+    if (!result.has_value())
+    {
+        EXPECT_EQ(result.error().code, error_code::file_write_failure);
+    }
     expect_loads(path, result.has_value() ? updated : original);
     EXPECT_FALSE(std::filesystem::exists(tmp_path(path)));
 }

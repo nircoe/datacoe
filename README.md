@@ -86,7 +86,8 @@ The library is a header-only `save`/`load` API on top of a small compiled I/O la
 ### Prerequisites
 
 - CMake 3.22 or higher
-- C++23 compatible compiler
+- C++23 compatible compiler, with exceptions enabled (the public header uses them). Linking `datacoe` sets the C++23
+  requirement on your target
 - Git
 
 ### Build Steps
@@ -164,6 +165,13 @@ namespace game
 A key missing from an old save falls back to the field's default. Passing a type that is not `saveable` to `save`
 or `load` gives a single `static_assert` message.
 
+- Members must own their data (no `std::string_view`, pointers or other views), because `load` builds the value from
+  a temporary json.
+- A struct derived from a saveable struct needs its own macro call. Otherwise the base's functions are found and the
+  derived members are silently not saved.
+- Values are converted as leniently as nlohmann does, so a hand-edited `12.9` loads as `12`, `true` as `1`, and
+  out-of-range numbers are undefined behavior. If you want strict loading, write your own `from_json`.
+
 ### Save
 
 ```cpp
@@ -176,8 +184,15 @@ auto saved = datacoe::save("save_game.json", data);
 auto encrypted = datacoe::save("save_game.json", data, true);
 ```
 
-`save` returns `std::expected<void, datacoe::error>`. It writes `<path>.tmp` and then renames it over the target,
-so a crash or a write error never destroys the old save. Power loss is not covered, the standard library has no fsync.
+`save` returns `std::expected<void, datacoe::error>`. It writes `<path>.datacoe.tmp` and then renames it over the
+target, so a crash or a write error never destroys the old save. Power loss is not covered, the standard library has
+no fsync.
+
+- `<path>.datacoe.tmp` is reserved, don't keep other files under that name.
+- The save file is replaced, so a symlink pointing at it is not supported (it becomes a regular file and the
+  permissions reset to the default). A symlinked directory works.
+- Values that couldn't be loaded back, like NaN/Inf floats and nlohmann binary values, return
+  `serialization_failure` and the old save stays.
 
 ### Load
 
@@ -228,7 +243,7 @@ All dependencies are automatically handled:
 
 - **[CryptoPP-CMake](https://github.com/abdes/cryptopp-cmake):** Fetched and built by CMake during configuration, via `cmake/cryptopp.cmake` - currently pinned to CRYPTOPP_8_9_0
 - **[nlohmann/json](https://github.com/nlohmann/json):** Fetched by CMake during configuration, via `cmake/json.cmake` - currently pinned to v3.11.3
-- **[testcoe](https://github.com/nircoe/testcoe):** Adds grid visualization and crash reporting to Google Test. Automatically fetched by CMake during configuration only if `DATACOE_BUILD_TESTS` is ON, via `cmake/testcoe.cmake` - currently pinned to v0.1.2. Pulls in Google Test transitively.
+- **[testcoe](https://github.com/nircoe/testcoe):** Adds grid visualization and crash reporting to Google Test. Automatically fetched by CMake during configuration only if `DATACOE_BUILD_TESTS` is ON, via `cmake/testcoe.cmake` - currently pinned to v0.2.0. Pulls in Google Test transitively.
 
 If your project already provides `nlohmann_json::nlohmann_json` or `cryptopp` before datacoe is added, datacoe skips fetching its own copy and uses yours. Fetch yours first.
 
@@ -241,7 +256,7 @@ For example, testcoe:
 FetchContent_Declare(
     testcoe
     GIT_REPOSITORY https://github.com/nircoe/testcoe.git
-    GIT_TAG v0.1.2  # Update to desired version
+    GIT_TAG v0.2.0  # Update to desired version
     GIT_SHALLOW TRUE
 )
 ```
@@ -331,8 +346,6 @@ Our CI pipeline automatically builds and tests the project with the following co
   - Apple Clang
 
 Each configuration compiles the project and runs the full test suite to verify compatibility and functionality. All supported platforms use C++23 features for maximum portability.
-
-Platform-specific code (such as file permissions handling) is wrapped in conditional compilation blocks to ensure proper behavior across different operating systems.
 
 ### For [Contributors](#contributing)
 

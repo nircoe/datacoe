@@ -101,7 +101,7 @@ TEST_F(MemoryTests, ManyFiles)
         EXPECT_EQ(*loaded, (player_save{std::format("player_{}", i), i, {i, i + 1}}));
     }
 
-    // Test 2: the directory holds exactly those files, a leftover .tmp would add one
+    // Test 2: the directory holds exactly those files, a leftover .datacoe.tmp would add one
     const auto entries = std::distance(std::filesystem::directory_iterator(m_dir.path()),
                                        std::filesystem::directory_iterator());
     EXPECT_EQ(entries, file_count);
