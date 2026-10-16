@@ -1,174 +1,108 @@
+#include <datacoe/save_load.hpp>
+#include <support/test_support.hpp>
 #include <gtest/gtest.h>
-#include <datacoe/data_manager.hpp>
 #include <filesystem>
-#include <memory>
-#include <vector>
+#include <format>
+#include <iterator>
+#include <numeric>
+#include <string>
 
-namespace datacoe
+using namespace datacoe;
+using namespace datacoe_test;
+
+//==============================================================================
+//                  MemoryTests - repeated and large data tests
+//==============================================================================
+
+class MemoryTests : public ::testing::Test
 {
-    class MemoryTest : public ::testing::Test
+protected:
+    temp_dir m_dir;
+};
+
+//==============================================================================
+//                               Repeated Save and Load
+//==============================================================================
+
+TEST_F(MemoryTests, RepeatedSaveLoad)
+{
+    constexpr int iterations = 100;
+    const auto path = m_dir / "repeated.json";
+
+    // Test 1: save and load the same path over and over, the last value wins
+    for (int i = 0; i < iterations; ++i)
     {
-    protected:
-        std::string m_testFilename;
+        const player_save expected{"MemoryTest", i, {i}};
+        const auto saved = save(path, expected);
+        ASSERT_TRUE(saved.has_value()) << saved.error().message;
 
-        void SetUp() override
-        {
-            m_testFilename = "memory_test_data.json";
-            // Clean up any leftover files from previous tests
-            try
-            {
-                if (std::filesystem::exists(m_testFilename))
-                {
-                    std::filesystem::remove(m_testFilename);
-                }
-            }
-            catch (const std::filesystem::filesystem_error &)
-            {
-                // Ignore errors if file doesn't exist
-            }
-        }
+        const auto loaded = load<player_save>(path);
+        ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
+        EXPECT_EQ(*loaded, expected);
+    }
+}
 
-        void TearDown() override
-        {
-            try
-            {
-                if (std::filesystem::exists(m_testFilename))
-                {
-                    std::filesystem::remove(m_testFilename);
-                }
-            }
-            catch (const std::filesystem::filesystem_error &)
-            {
-                // Ignore errors
-            }
-        }
-    };
+//==============================================================================
+//                                 Large Payload
+//==============================================================================
 
-    TEST_F(MemoryTest, RepeatedCreationAndDestruction)
+TEST_F(MemoryTests, LargePayload)
+{
+    player_save data{std::string(1024 * 1024, 'A'), 999999, {}};
+    data.unlocked.resize(100000);
+    std::iota(data.unlocked.begin(), data.unlocked.end(), 0);
+
+    // Test 1: 1 MB nickname and 100k unlocked entries
     {
-        // This test checks for memory leaks by repeatedly creating and destroying objects
-        constexpr int iterations = 1000;
+        const auto path = m_dir / "large.json";
 
-        for (int i = 0; i < iterations; i++)
-        {
-            DataManager dm;
-            bool initResult = dm.init(m_testFilename);
+        const auto saved = save(path, data);
+        ASSERT_TRUE(saved.has_value()) << saved.error().message;
 
-            // First iteration shouldn't find a file
-            if (i == 0)
-                ASSERT_FALSE(initResult) << "First init() should return false for new file";
-            else
-                ASSERT_TRUE(initResult) << "Subsequent init() calls should return true for existing file";
-
-            GameData gameData;
-            gameData.setNickname("MemoryTest");
-            gameData.setHighscore(i);
-            dm.setGamedata(gameData);
-
-            dm.saveGame();
-        }
-
-        // If there's a memory leak, this test will consume a lot of memory
-        // Tools like Valgrind or Address Sanitizer should be used to detect actual leaks
-
-        // Verify functionality still works
-        DataManager finalDm;
-        bool finalLoadResult = finalDm.init(m_testFilename);
-        ASSERT_TRUE(finalLoadResult) << "Final init() should return true for existing file";
-        ASSERT_EQ(finalDm.getGamedata().getNickname(), "MemoryTest");
-        ASSERT_EQ(finalDm.getGamedata().getHighscore(), iterations - 1);
+        const auto loaded = load<player_save>(path);
+        ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
+        EXPECT_EQ(*loaded, data);
     }
 
-    TEST_F(MemoryTest, LargeDataHandling)
+    // Test 2: Encrypted, the same payload
     {
-        // Test with larger-than-typical data to check memory handling
-        constexpr int dataSize = 1000; // Large enough to test memory usage but not too large
+        const auto path = m_dir / "large.sav";
 
-        // Create a DataManager with a large nickname
-        {
-            DataManager dm;
-            bool initResult = dm.init(m_testFilename);
-            ASSERT_FALSE(initResult) << "init() should return false for new file";
+        const auto saved = save(path, data, true);
+        ASSERT_TRUE(saved.has_value()) << saved.error().message;
+        EXPECT_TRUE(read_text(path).starts_with(ENCRYPTED_PREFIX));
 
-            // Generate a large string
-            std::string largeString(dataSize, 'A');
+        const auto loaded = load<player_save>(path);
+        ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
+        EXPECT_EQ(*loaded, data);
+    }
+}
 
-            GameData gameData;
-            gameData.setNickname(largeString);
-            gameData.setHighscore(999999);
-            dm.setGamedata(gameData);
+//==============================================================================
+//                                  Many Files
+//==============================================================================
 
-            ASSERT_TRUE(dm.saveGame());
-        }
+TEST_F(MemoryTests, ManyFiles)
+{
+    constexpr int file_count = 100;
 
-        // Check data was saved correctly
-        {
-            DataManager dm;
-            bool loadResult = dm.init(m_testFilename);
-            ASSERT_TRUE(loadResult) << "init() should return true for existing file";
-            ASSERT_EQ(dm.getGamedata().getNickname().size(), dataSize);
-            ASSERT_EQ(dm.getGamedata().getHighscore(), 999999);
-        }
+    // Test 1: every file holds its own data
+    for (int i = 0; i < file_count; ++i)
+    {
+        const auto saved =
+            save(m_dir / std::format("slot_{}.json", i), player_save{std::format("player_{}", i), i, {i, i + 1}});
+        ASSERT_TRUE(saved.has_value()) << saved.error().message;
     }
 
-    TEST_F(MemoryTest, MultipleInstancesWithSameFile)
+    for (int i = 0; i < file_count; ++i)
     {
-        // Test multiple DataManager instances using the same file
-        constexpr int instanceCount = 10;
-
-        // Create initial data
-        {
-            DataManager dm;
-            bool initResult = dm.init(m_testFilename);
-            ASSERT_FALSE(initResult) << "init() should return false for new file";
-
-            GameData gameData;
-            gameData.setNickname("InitialData");
-            gameData.setHighscore(1000);
-            dm.setGamedata(gameData);
-
-            ASSERT_TRUE(dm.saveGame());
-        }
-
-        // Create multiple instances all pointing to the same file
-        std::vector<std::unique_ptr<DataManager>> managers;
-        for (int i = 0; i < instanceCount; i++)
-        {
-            auto dm = std::make_unique<DataManager>();
-            bool loadResult = dm->init(m_testFilename);
-            ASSERT_TRUE(loadResult) << "init() should return true for existing file";
-            managers.push_back(std::move(dm));
-        }
-
-        // Have each manager modify the data
-        for (int i = 0; i < instanceCount; i++)
-        {
-            GameData gameData;
-            gameData.setNickname("Manager" + std::to_string(i));
-            gameData.setHighscore(2000 + i);
-            managers[i]->setGamedata(gameData);
-            ASSERT_TRUE(managers[i]->saveGame());
-        }
-
-        // Check the final state
-        {
-            DataManager dm;
-            bool loadResult = dm.init(m_testFilename);
-            ASSERT_TRUE(loadResult) << "init() should return true for existing file";
-            ASSERT_EQ(dm.getGamedata().getNickname(), "Manager" + std::to_string(instanceCount - 1));
-            ASSERT_EQ(dm.getGamedata().getHighscore(), 2000 + instanceCount - 1);
-        }
-
-        // Release all managers
-        managers.clear();
-
-        // Verify file access still works
-        {
-            DataManager dm;
-            bool finalLoadResult = dm.init(m_testFilename);
-            ASSERT_TRUE(finalLoadResult) << "init() should return true for existing file";
-            const GameData &data = dm.getGamedata();
-            ASSERT_FALSE(data.getNickname().empty());
-        }
+        const auto loaded = load<player_save>(m_dir / std::format("slot_{}.json", i));
+        ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
+        EXPECT_EQ(*loaded, (player_save{std::format("player_{}", i), i, {i, i + 1}}));
     }
-} // namespace datacoe
+
+    // Test 2: the directory holds exactly those files, a leftover .datacoe.tmp would add one
+    const auto entries = std::distance(std::filesystem::directory_iterator(m_dir.path()),
+                                       std::filesystem::directory_iterator());
+    EXPECT_EQ(entries, file_count);
+}

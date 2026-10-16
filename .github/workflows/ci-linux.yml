@@ -27,15 +27,22 @@ jobs:
             cmake-generator: 'Ninja'
             cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
           
-          # Linux with Clang
+          # libstdc++'s <expected> is incompatible with Clang, so this job builds with libc++
           - name: "Linux Clang"
             compiler: clang
             cmake-generator: 'Ninja'
-            cmake-options: '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
+            cmake-options: '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++'
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v7
+
+    - name: Install libc++
+      if: matrix.compiler == 'clang'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libc++-18-dev libc++abi-18-dev
+      shell: bash
 
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1.2
