@@ -1,4 +1,5 @@
 #include <datacoe/save_load.hpp>
+#include <datacoe_config.hpp>
 #include <support/test_support.hpp>
 #include <gtest/gtest.h>
 #include <filesystem>
@@ -87,8 +88,18 @@ TEST_F(IntegrationTests, MultipleFiles)
     expect_loads(first_path, first);
     expect_loads(second_path, changed);
     expect_loads(third_path, third);
+}
 
-    // Test 3: Encrypted, encrypted and plain files side by side in one directory
+TEST_F(IntegrationTests, EncryptedAndPlainFiles)
+{
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
+    const player_save first{"first", 10, {1}};
+    const auto first_path = m_dir / "first.sav";
+    expect_round_trip(first_path, first);
+
+    // Test 1: encrypted and plain files side by side in one directory
     {
         const player_save secret{"secret", 40, {4}};
         const auto secret_path = m_dir / "secret.sav";
@@ -102,6 +113,9 @@ TEST_F(IntegrationTests, MultipleFiles)
 
 TEST_F(IntegrationTests, EncryptionToggleLifecycle)
 {
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
     const auto path = m_dir / "toggle.sav";
 
     // Test 1: switch between plain and encrypted over several save and load cycles
@@ -131,8 +145,14 @@ TEST_F(IntegrationTests, CorruptionRecovery)
 
         expect_round_trip(path, player_save{"recovered", 300, {}});
     }
+}
 
-    // Test 2: Encrypted, truncated to the prefix, load fails and saving fresh data recovers
+TEST_F(IntegrationTests, EncryptedCorruptionRecovery)
+{
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
+    // Test 1: truncated to the prefix, load fails and saving fresh data recovers
     {
         const auto path = m_dir / "encrypted.sav";
         expect_round_trip(path, player_save{"valid", 100, {}}, true);

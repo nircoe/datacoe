@@ -1,5 +1,6 @@
 #include <datacoe/utils/error.hpp>
 #include <datacoe/utils/io.hpp>
+#include <datacoe_config.hpp>
 #include <support/test_support.hpp>
 #include <gtest/gtest.h>
 #include <cstddef>
@@ -40,8 +41,14 @@ TEST_F(IoTests, IsEncrypted)
 
     // Test 5: shorter than the prefix
     EXPECT_FALSE(internal::is_encrypted("DATACOE"));
+}
 
-    // Test 6: output of encrypt()
+TEST_F(IoTests, IsEncryptedOnEncryptOutput)
+{
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
+    // Test 1: output of encrypt()
     {
         const auto encrypted = internal::encrypt("{}");
         ASSERT_TRUE(encrypted.has_value()) << encrypted.error().message;
@@ -55,6 +62,9 @@ TEST_F(IoTests, IsEncrypted)
 
 TEST_F(IoTests, EncryptDecrypt)
 {
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
     // Test 1: round trip for different kinds of text
     {
         std::string long_text;
@@ -111,6 +121,9 @@ TEST_F(IoTests, EncryptDecrypt)
 
 TEST_F(IoTests, GoldenOldSave)
 {
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
     // Test 1: a save from the first datacoe format still decrypts
     const auto decrypted = internal::decrypt(GOLDEN_ENCRYPTED_SAVE);
     ASSERT_TRUE(decrypted.has_value()) << decrypted.error().message;
