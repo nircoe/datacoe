@@ -17,6 +17,7 @@ jobs:
         -DCMAKE_C_COMPILER_LAUNCHER=ccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         -DCMAKE_BUILD_TYPE=Release
+        -DDATACOE_ENABLE_ENCRYPTION=ON
     strategy:
       fail-fast: false
       matrix:

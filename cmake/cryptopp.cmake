@@ -1,4 +1,15 @@
 function(datacoe_fetch_cryptopp)
+    if(NOT DATACOE_ENABLE_ENCRYPTION)
+        message(STATUS "[datacoe] Encryption disabled")
+        message(STATUS "[datacoe] To enable: \"set(DATACOE_ENABLE_ENCRYPTION ON)\" before fetching datacoe")
+        set(DATACOE_ENABLE_ENCRYPTION 0 PARENT_SCOPE)
+        return()
+    endif()
+
+    message(STATUS "[datacoe] Encryption enabled")
+    message(STATUS "[datacoe] To disable: \"set(DATACOE_ENABLE_ENCRYPTION OFF)\" before fetching datacoe")
+    set(DATACOE_ENABLE_ENCRYPTION 1 PARENT_SCOPE)
+
     if(TARGET cryptopp)
         message(STATUS "[datacoe] cryptopp already available, skipping fetch")
         return()
@@ -20,6 +31,8 @@ function(datacoe_fetch_cryptopp)
         GIT_TAG CRYPTOPP_8_9_0
         GIT_SHALLOW TRUE
     )
+    # Don't pass our C++23 down to CryptoPP, it picks its own standard
+    unset(CMAKE_CXX_STANDARD)
     FetchContent_MakeAvailable(cryptopp-cmake)
 
     if(MSVC)

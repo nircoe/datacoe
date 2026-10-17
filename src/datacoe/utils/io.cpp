@@ -1,15 +1,19 @@
 #include <datacoe/utils/io.hpp>
-#include <cryptopp/aes.h>
-#include <cryptopp/modes.h>
-#include <cryptopp/filters.h>
-#include <cryptopp/osrng.h>
-#include <cryptopp/base64.h>
+#include <datacoe_config.hpp>
 #include <cstdint>
 #include <exception>
 #include <format>
 #include <fstream>
 #include <string_view>
 #include <system_error>
+
+#if DATACOE_ENABLE_ENCRYPTION
+    #include <cryptopp/aes.h>
+    #include <cryptopp/modes.h>
+    #include <cryptopp/filters.h>
+    #include <cryptopp/osrng.h>
+    #include <cryptopp/base64.h>
+#endif
 
 namespace datacoe
 {
@@ -19,10 +23,12 @@ namespace datacoe
         {
             constexpr std::string_view ENCRYPTION_PREFIX = "DATACOE_ENCRYPTED";
 
+#if DATACOE_ENABLE_ENCRYPTION
             // Fixed Encryption Key (Warning: This is Insecure, I'm using it for learning purposes only!)
             constexpr CryptoPP::byte FIXED_KEY[] = {
                 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
                 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
+#endif
 
             // path.string() can throw on MSVC, u8string() can't
             std::string path_text(const std::filesystem::path &path)
@@ -73,6 +79,7 @@ namespace datacoe
             return contents.starts_with(ENCRYPTION_PREFIX);
         }
 
+#if DATACOE_ENABLE_ENCRYPTION
         std::expected<std::string, error> encrypt(const std::string &plaintext)
         {
             try
@@ -134,6 +141,21 @@ namespace datacoe
                 return std::unexpected(error{error_code::decryption_failure, e.what()});
             }
         }
+#else
+        std::expected<std::string, error> encrypt(const std::string &)
+        {
+            return std::unexpected(
+                error{error_code::encryption_failure,
+                      "can't encrypt, DATACOE_ENABLE_ENCRYPTION is OFF. Set it to ON to enable encryption"});
+        }
+
+        std::expected<std::string, error> decrypt(const std::string &)
+        {
+            return std::unexpected(
+                error{error_code::decryption_failure,
+                      "file is encrypted, but DATACOE_ENABLE_ENCRYPTION is OFF. Set it to ON to read it"});
+        }
+#endif
 
         std::expected<std::string, error> read_file(const std::filesystem::path &path)
         {
