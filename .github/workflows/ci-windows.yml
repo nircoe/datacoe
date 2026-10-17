@@ -13,7 +13,7 @@ jobs:
     runs-on: windows-latest
     if: github.event.pull_request.draft == false || github.event_name == 'push'
     env:
-      COMMON_CMAKE_FLAGS: -DCMAKE_BUILD_TYPE=Release
+      COMMON_CMAKE_FLAGS: -DCMAKE_BUILD_TYPE=Release -DDATACOE_ENABLE_ENCRYPTION=ON
     strategy:
       fail-fast: false
       matrix:

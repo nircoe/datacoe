@@ -35,7 +35,7 @@ The library offers a base implementation for data management tasks, including:
 
 - Reading and writing game data to files
 - Serialization and deserialization of game data using [nlohmann/json](https://github.com/nlohmann/json)
-- Encryption and decryption of data using [CryptoPP](https://github.com/weidai11/cryptopp) (With the help of [CryptoPP-CMake](https://github.com/abdes/cryptopp-cmake))
+- Optional encryption and decryption of data using [CryptoPP](https://github.com/weidai11/cryptopp) (With the help of [CryptoPP-CMake](https://github.com/abdes/cryptopp-cmake))
 - Test suite using [Google Test](https://github.com/google/googletest), with [testcoe](https://github.com/nircoe/testcoe) adding grid visualization and crash reporting
 
 [Back to top](#table-of-contents)
@@ -44,7 +44,7 @@ The library offers a base implementation for data management tasks, including:
 
 - Basic error handling for file operations
 - JSON-based serialization and deserialization
-- AES encryption for secure data storage
+- Optional AES encryption, off by default (see [Encryption](#encryption))
 - Memory-safe implementation
 - Extensive test suite including:
   - Basic functionality
@@ -100,8 +100,8 @@ cd datacoe
 # Create a build directory
 mkdir build && cd build
 
-# Configure (with tests) and build
-cmake -DDATACOE_BUILD_TESTS=ON ..
+# Configure (with tests and encryption) and build
+cmake -DDATACOE_BUILD_TESTS=ON -DDATACOE_ENABLE_ENCRYPTION=ON ..
 cmake --build .
 
 # Run tests (only built with DATACOE_BUILD_TESTS=ON)
@@ -109,6 +109,22 @@ cmake --build .
 ```
 
 Dependencies are downloaded with FetchContent at configure time, so the first configure needs network access.
+
+### Encryption
+
+Encryption is off by default for leaner builds.
+`DATACOE_ENABLE_ENCRYPTION` turns it on, and CryptoPP is downloaded, built and linked only then.
+With it off:
+
+- `save(path, data, true)` returns `encryption_failure` and writes nothing.
+- `load` of an encrypted file returns `decryption_failure`.
+
+Plain saves work the same either way. When using datacoe through FetchContent, set the option before
+`FetchContent_MakeAvailable(datacoe)`:
+
+```cmake
+set(DATACOE_ENABLE_ENCRYPTION ON)
+```
 
 ### Integration Steps
 
@@ -180,7 +196,7 @@ game::save_data data{"Player1", 1000, {1, 2}};
 // Plain JSON
 auto saved = datacoe::save("save_game.json", data);
 
-// AES encrypted
+// AES encrypted (needs DATACOE_ENABLE_ENCRYPTION=ON)
 auto encrypted = datacoe::save("save_game.json", data, true);
 ```
 
@@ -241,11 +257,11 @@ namespace game
 
 All dependencies are automatically handled:
 
-- **[CryptoPP-CMake](https://github.com/abdes/cryptopp-cmake):** Fetched and built by CMake during configuration, via `cmake/cryptopp.cmake` - currently pinned to CRYPTOPP_8_9_0
+- **[CryptoPP-CMake](https://github.com/abdes/cryptopp-cmake):** Fetched and built by CMake during configuration only if `DATACOE_ENABLE_ENCRYPTION` is ON, via `cmake/cryptopp.cmake` - currently pinned to CRYPTOPP_8_9_0
 - **[nlohmann/json](https://github.com/nlohmann/json):** Fetched by CMake during configuration, via `cmake/json.cmake` - currently pinned to v3.11.3
 - **[testcoe](https://github.com/nircoe/testcoe):** Adds grid visualization and crash reporting to Google Test. Automatically fetched by CMake during configuration only if `DATACOE_BUILD_TESTS` is ON, via `cmake/testcoe.cmake` - currently pinned to v0.2.0. Pulls in Google Test transitively.
 
-If your project already provides `nlohmann_json::nlohmann_json` or `cryptopp` before datacoe is added, datacoe skips fetching its own copy and uses yours. Fetch yours first.
+If your project already provides `nlohmann_json` or `cryptopp` (with encryption ON) before datacoe is added, datacoe skips fetching its own copy and uses yours. Fetch yours first.
 
 ### Updating Dependencies (optional)
 
@@ -303,6 +319,8 @@ cmake --build .
 
 When building datacoe standalone, pass it on the command line instead: `cmake -DDATACOE_BUILD_TESTS=ON -DDATACOE_BUILD_INDIVIDUAL_TESTS=ON ..`
 
+The encryption tests are skipped when `DATACOE_ENABLE_ENCRYPTION` is OFF.
+
 ### Customizing Tests
 
 The tests use their own test-local `saveable` structs, defined in `tests/support/test_support.hpp`. There is
@@ -345,7 +363,9 @@ Our CI pipeline automatically builds and tests the project with the following co
 - **macOS**:
   - Apple Clang
 
-Each configuration compiles the project and runs the full test suite to verify compatibility and functionality. All supported platforms use C++23 features for maximum portability.
+Each configuration compiles the project with `DATACOE_ENABLE_ENCRYPTION=ON`
+and runs the full test suite to verify compatibility and functionality.
+The OFF build is not in CI. All supported platforms use C++23 features for maximum portability.
 
 ### For [Contributors](#contributing)
 

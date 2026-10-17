@@ -1,4 +1,5 @@
 #include <datacoe/save_load.hpp>
+#include <datacoe_config.hpp>
 #include <support/test_support.hpp>
 #include <gtest/gtest.h>
 #include <filesystem>
@@ -63,8 +64,18 @@ TEST_F(MemoryTests, LargePayload)
         ASSERT_TRUE(loaded.has_value()) << loaded.error().message;
         EXPECT_EQ(*loaded, data);
     }
+}
 
-    // Test 2: Encrypted, the same payload
+TEST_F(MemoryTests, LargeEncryptedPayload)
+{
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
+    player_save data{std::string(1024 * 1024, 'A'), 999999, {}};
+    data.unlocked.resize(100000);
+    std::iota(data.unlocked.begin(), data.unlocked.end(), 0);
+
+    // Test 1: the same payload
     {
         const auto path = m_dir / "large.sav";
 

@@ -4,7 +4,7 @@ add_library(datacoe
 
 target_link_libraries(datacoe
     PRIVATE
-        cryptopp
+        $<$<BOOL:${DATACOE_ENABLE_ENCRYPTION}>:cryptopp>
     PUBLIC
         datacoe_headers
 )

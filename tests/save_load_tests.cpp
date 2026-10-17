@@ -1,4 +1,5 @@
 #include <datacoe/save_load.hpp>
+#include <datacoe_config.hpp>
 #include <support/test_support.hpp>
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
@@ -91,6 +92,9 @@ TEST_F(SaveLoadTests, PlainRoundTrip)
 
 TEST_F(SaveLoadTests, EncryptedRoundTrip)
 {
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
     // Test 1: file is encrypted on disk and load needs no flag
     {
         const auto path = m_dir / "encrypted.sav";
@@ -106,6 +110,9 @@ TEST_F(SaveLoadTests, EncryptedRoundTrip)
 
 TEST_F(SaveLoadTests, EncryptionSwitching)
 {
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
     const auto path = m_dir / "switching.sav";
 
     // Test 1: plain, then encrypted, then plain again on the same path
@@ -123,6 +130,9 @@ TEST_F(SaveLoadTests, EncryptionSwitching)
 
 TEST_F(SaveLoadTests, GoldenOldEncryptedSave)
 {
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
     // Test 1: a save from the first datacoe format still loads
     {
         const auto path = m_dir / "golden.sav";
@@ -133,6 +143,35 @@ TEST_F(SaveLoadTests, GoldenOldEncryptedSave)
         EXPECT_EQ(loaded->nickname, "golden");
         EXPECT_EQ(loaded->highscore, 7);
         EXPECT_TRUE(loaded->unlocked.empty());
+    }
+}
+
+TEST_F(SaveLoadTests, EncryptionDisabled)
+{
+    if constexpr (DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION to be off";
+
+    // Test 1: asking for an encrypted save fails and nothing is written
+    {
+        const auto path = m_dir / "encrypted.sav";
+
+        const auto result = save(path, player_save{"nir", 1, {}}, true);
+
+        ASSERT_NO_FATAL_FAILURE(expect_error(result, error_code::encryption_failure));
+        EXPECT_NE(result.error().message.find("DATACOE_ENABLE_ENCRYPTION"), std::string::npos);
+        EXPECT_FALSE(std::filesystem::exists(path));
+        EXPECT_FALSE(std::filesystem::exists(tmp_path(path)));
+    }
+
+    // Test 2: loading a file that has the encrypted prefix fails
+    {
+        const auto path = m_dir / "from_another_build.sav";
+        write_text(path, ENCRYPTED_PREFIX + "anything");
+
+        const auto result = load<player_save>(path);
+
+        ASSERT_NO_FATAL_FAILURE(expect_error(result, error_code::decryption_failure));
+        EXPECT_NE(result.error().message.find("DATACOE_ENABLE_ENCRYPTION"), std::string::npos);
     }
 }
 
@@ -274,6 +313,9 @@ TEST_F(SaveLoadTests, FailedWriteKeepsExistingSave)
 
 TEST_F(SaveLoadTests, FailedWriteKeepsExistingEncryptedSave)
 {
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
     std::error_code ec;
     const player_save original{"original", 1, {1, 2}};
 

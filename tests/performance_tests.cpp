@@ -1,4 +1,5 @@
 #include <datacoe/save_load.hpp>
+#include <datacoe_config.hpp>
 #include <support/test_support.hpp>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -189,6 +190,9 @@ TEST_F(PerformanceTests, StressTest)
 
 TEST_F(PerformanceTests, EncryptedPerformanceComparison)
 {
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
     constexpr int iterations = 50;
     const auto encrypted_path = m_dir / "perf.sav";
     const auto plain_path = m_dir / "perf.json";

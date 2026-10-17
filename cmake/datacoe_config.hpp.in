@@ -1,0 +1,4 @@
+// Auto-generated datacoe configuration - DO NOT EDIT
+#pragma once
+
+#define DATACOE_ENABLE_ENCRYPTION @DATACOE_ENABLE_ENCRYPTION@

@@ -1,4 +1,5 @@
 #include <datacoe/save_load.hpp>
+#include <datacoe_config.hpp>
 #include <support/test_support.hpp>
 #include <gtest/gtest.h>
 #include <filesystem>
@@ -73,7 +74,22 @@ TEST_F(ErrorHandlingTests, CorruptFiles)
         expect_resave_recovers(path);
     }
 
-    // Test 2: Encrypted, cut in the middle of the base64 text
+    // Test 2: valid JSON with an unrelated structure loads with the defaults
+    {
+        const auto path = m_dir / "unrelated.json";
+        write_text(path, R"({"wrongKey":"wrongValue"})");
+
+        expect_loads(path, player_save{});
+        expect_resave_recovers(path);
+    }
+}
+
+TEST_F(ErrorHandlingTests, CorruptEncryptedFiles)
+{
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
+        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+
+    // Test 1: cut in the middle of the base64 text
     {
         const auto path = m_dir / "truncated.sav";
         const auto saved = save(path, player_save{std::string(100, 'n'), 1, {}}, true);
@@ -85,15 +101,6 @@ TEST_F(ErrorHandlingTests, CorruptFiles)
 
         expect_error(load<player_save>(path), error_code::decryption_failure);
         expect_resave_recovers(path, true);
-    }
-
-    // Test 3: valid JSON with an unrelated structure loads with the defaults
-    {
-        const auto path = m_dir / "unrelated.json";
-        write_text(path, R"({"wrongKey":"wrongValue"})");
-
-        expect_loads(path, player_save{});
-        expect_resave_recovers(path);
     }
 }
 

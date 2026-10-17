@@ -10,12 +10,15 @@ include(FetchContent)
 include(cmake/datacoe_config.cmake)
 
 option(DATACOE_BUILD_TESTS "Build the datacoe test suite" OFF)
+option(DATACOE_ENABLE_ENCRYPTION "Build datacoe with CryptoPP encryption support" OFF)
 
 datacoe_fetch_cryptopp()
 datacoe_fetch_json()
 if(DATACOE_BUILD_TESTS)
     datacoe_fetch_testcoe()
 endif()
+
+datacoe_generate_config_header()
 
 add_subdirectory(include)
 add_subdirectory(src)

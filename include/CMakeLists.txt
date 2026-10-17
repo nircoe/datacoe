@@ -2,6 +2,7 @@ add_library(datacoe_headers INTERFACE)
 target_include_directories(datacoe_headers
     INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${DATACOE_CONFIG_DIR}
 )
 
 target_compile_features(datacoe_headers
