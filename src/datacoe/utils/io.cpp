@@ -24,7 +24,7 @@ namespace datacoe
             constexpr std::string_view ENCRYPTION_PREFIX = "DATACOE_ENCRYPTED";
 
 #if DATACOE_ENABLE_ENCRYPTION
-            // Fixed Encryption Key (Warning: This is Insecure, I'm using it for learning purposes only!)
+            // Hardcoded key, so the encryption is not secure. It's only for learning.
             constexpr CryptoPP::byte FIXED_KEY[] = {
                 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
                 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
@@ -117,11 +117,13 @@ namespace datacoe
                 if (!file_contents.starts_with(ENCRYPTION_PREFIX))
                     return std::unexpected(error{error_code::decryption_failure, "missing encryption prefix"});
 
+                const auto *encoded = reinterpret_cast<const CryptoPP::byte *>(file_contents.data()) +
+                                      ENCRYPTION_PREFIX.size();
+                const auto encoded_size = file_contents.size() - ENCRYPTION_PREFIX.size();
+
                 std::string decoded;
-                CryptoPP::StringSource ss1(
-                    reinterpret_cast<const CryptoPP::byte *>(file_contents.data()) + ENCRYPTION_PREFIX.size(),
-                    file_contents.size() - ENCRYPTION_PREFIX.size(), true,
-                    new CryptoPP::Base64Decoder(new CryptoPP::StringSink(decoded)));
+                CryptoPP::StringSource ss1(encoded, encoded_size, true,
+                                           new CryptoPP::Base64Decoder(new CryptoPP::StringSink(decoded)));
 
                 if (decoded.size() <= CryptoPP::AES::BLOCKSIZE)
                     return std::unexpected(error{error_code::decryption_failure, "encrypted data is too short"});

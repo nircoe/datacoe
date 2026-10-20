@@ -36,7 +36,7 @@ function(datacoe_fetch_cryptopp)
     FetchContent_MakeAvailable(cryptopp-cmake)
 
     if(MSVC)
-        # CryptoPP 8.9.0 fails to build on newer MSVC - integer.cpp and zdeflate.cpp both use a
+        # CryptoPP 8.9.0 fails to build on newer MSVC. integer.cpp and zdeflate.cpp both use a
         # removed helper function for CRYPTOPP_MSC_VERSION >= 1500/1600 with no upper bound.
         # Upstream fixed both by capping them at < 1938; patch it in until they release a
         # version with the fix.
