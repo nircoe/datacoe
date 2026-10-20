@@ -27,7 +27,7 @@ jobs:
             compiler: gcc
             cmake-generator: 'Ninja'
             cmake-options: '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
-          
+
           # libstdc++'s <expected> is incompatible with Clang, so this job builds with libc++
           - name: "Linux Clang"
             compiler: clang
@@ -64,4 +64,16 @@ jobs:
       working-directory: build
       run: |
         ./tests/datacoe_tests
+      shell: bash
+
+  format-check:
+    name: Format check
+    runs-on: ubuntu-26.04
+    if: github.event.pull_request.draft == false || github.event_name == 'push'
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v7
+
+    - name: Check formatting
+      run: git ls-files '*.cpp' '*.hpp' | xargs clang-format --dry-run -Werror
       shell: bash
