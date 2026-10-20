@@ -9,10 +9,10 @@
 
 #if DATACOE_ENABLE_ENCRYPTION
     #include <cryptopp/aes.h>
-    #include <cryptopp/modes.h>
-    #include <cryptopp/filters.h>
-    #include <cryptopp/osrng.h>
     #include <cryptopp/base64.h>
+    #include <cryptopp/filters.h>
+    #include <cryptopp/modes.h>
+    #include <cryptopp/osrng.h>
 #endif
 
 namespace datacoe
@@ -25,9 +25,8 @@ namespace datacoe
 
 #if DATACOE_ENABLE_ENCRYPTION
             // Hardcoded key, so the encryption is not secure. It's only for learning.
-            constexpr CryptoPP::byte FIXED_KEY[] = {
-                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
+            constexpr CryptoPP::byte FIXED_KEY[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                                    0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
 #endif
 
             // path.string() can throw on MSVC, u8string() can't
@@ -39,8 +38,7 @@ namespace datacoe
 
             std::expected<void, error> check_readable_file(const std::filesystem::path &path)
             {
-                if (path.empty())
-                    return std::unexpected(error{error_code::invalid_argument, "path is empty"});
+                if (path.empty()) return std::unexpected(error{error_code::invalid_argument, "path is empty"});
 
                 std::error_code ec;
                 const auto status = std::filesystem::status(path, ec);
@@ -62,8 +60,7 @@ namespace datacoe
             std::expected<std::ifstream, error> open_for_read(const std::filesystem::path &path)
             {
                 const auto readable = check_readable_file(path);
-                if (!readable)
-                    return std::unexpected(readable.error());
+                if (!readable) return std::unexpected(readable.error());
 
                 std::ifstream file(path, std::ios::binary);
                 if (!file.is_open())
@@ -117,8 +114,8 @@ namespace datacoe
                 if (!file_contents.starts_with(ENCRYPTION_PREFIX))
                     return std::unexpected(error{error_code::decryption_failure, "missing encryption prefix"});
 
-                const auto *encoded = reinterpret_cast<const CryptoPP::byte *>(file_contents.data()) +
-                                      ENCRYPTION_PREFIX.size();
+                const auto *encoded =
+                    reinterpret_cast<const CryptoPP::byte *>(file_contents.data()) + ENCRYPTION_PREFIX.size();
                 const auto encoded_size = file_contents.size() - ENCRYPTION_PREFIX.size();
 
                 std::string decoded;
@@ -164,8 +161,7 @@ namespace datacoe
             try
             {
                 auto file = open_for_read(path);
-                if (!file)
-                    return std::unexpected(file.error());
+                if (!file) return std::unexpected(file.error());
 
                 std::error_code ec;
                 const auto size = std::filesystem::file_size(path, ec);
@@ -207,8 +203,8 @@ namespace datacoe
 
                 std::ofstream file(tmp, std::ios::binary | std::ios::trunc);
                 if (!file.is_open())
-                    return std::unexpected(error{error_code::file_write_failure,
-                                                 std::format("could not open file: {}", path_text(tmp))});
+                    return std::unexpected(
+                        error{error_code::file_write_failure, std::format("could not open file: {}", path_text(tmp))});
 
                 file.write(contents.data(), static_cast<std::streamsize>(contents.size()));
                 file.close();
@@ -217,8 +213,8 @@ namespace datacoe
                 if (file.fail())
                 {
                     std::filesystem::remove(tmp, ec);
-                    return std::unexpected(error{error_code::file_write_failure,
-                                                 std::format("could not write file: {}", path_text(tmp))});
+                    return std::unexpected(
+                        error{error_code::file_write_failure, std::format("could not write file: {}", path_text(tmp))});
                 }
 
                 std::filesystem::rename(tmp, path, ec);

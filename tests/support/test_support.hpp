@@ -66,13 +66,9 @@ namespace datacoe_test
         explicit no_default_save(int);
     };
 
-    inline void to_json(nlohmann::json &, const no_default_save &)
-    {
-    }
+    inline void to_json(nlohmann::json &, const no_default_save &) { }
 
-    inline void from_json(const nlohmann::json &, no_default_save &)
-    {
-    }
+    inline void from_json(const nlohmann::json &, no_default_save &) { }
 
     inline int process_id()
     {

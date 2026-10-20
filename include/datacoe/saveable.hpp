@@ -10,8 +10,7 @@ namespace datacoe
     // Members must own their data (no std::string_view, pointers or other views), load builds the value from a
     // temporary json.
     template <typename T>
-    concept saveable = std::semiregular<T> && requires(const T &value, const nlohmann::json &j)
-    {
+    concept saveable = std::semiregular<T> && requires(const T &value, const nlohmann::json &j) {
         nlohmann::json(value);
         { j.get<T>() } -> std::same_as<T>;
     };
