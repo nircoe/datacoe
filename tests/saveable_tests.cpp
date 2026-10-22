@@ -5,7 +5,7 @@
 #include <string>
 
 using namespace datacoe;
-using namespace datacoe_test;
+using namespace test_utils;
 
 //==============================================================================
 //                  SaveableTests - saveable concept tests

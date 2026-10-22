@@ -9,7 +9,7 @@
 #include <utility>
 
 using namespace datacoe;
-using namespace datacoe_test;
+using namespace test_utils;
 
 namespace
 {
@@ -35,7 +35,7 @@ namespace
         std::filesystem::path m_path;
 
     public:
-        explicit write_permission_guard(std::filesystem::path path) : m_path(std::move(path)) {}
+        explicit write_permission_guard(std::filesystem::path path) : m_path(std::move(path)) { }
 
         write_permission_guard(const write_permission_guard &) = delete;
         write_permission_guard &operator=(const write_permission_guard &) = delete;
@@ -86,8 +86,7 @@ TEST_F(ErrorHandlingTests, CorruptFiles)
 
 TEST_F(ErrorHandlingTests, CorruptEncryptedFiles)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     // Test 1: cut in the middle of the base64 text
     {
@@ -138,8 +137,7 @@ TEST_F(ErrorHandlingTests, ReadOnlyTarget)
                                  std::filesystem::perms::owner_write | std::filesystem::perms::group_write |
                                      std::filesystem::perms::others_write,
                                  std::filesystem::perm_options::remove, ec);
-    if (ec)
-        GTEST_SKIP() << "could not make the file read-only: " << ec.message();
+    if (ec) GTEST_SKIP() << "could not make the file read-only: " << ec.message();
 
     const auto result = save(path, updated);
 

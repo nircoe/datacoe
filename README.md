@@ -1,7 +1,7 @@
 # datacoe
 
-datacoe is a small, simple and generic C++ data management library template for game development,
-It provides functionalities for data persistence, serialization, and encryption.
+datacoe is a small, generic C++ data management library for game development.
+It handles data persistence, serialization and optional encryption.
 
 [![Windows](https://github.com/nircoe/datacoe/actions/workflows/ci-windows.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-windows.yml)
 [![Linux](https://github.com/nircoe/datacoe/actions/workflows/ci-linux.yml/badge.svg?branch=main&event=push)](https://github.com/nircoe/datacoe/actions/workflows/ci-linux.yml)
@@ -10,7 +10,6 @@ It provides functionalities for data persistence, serialization, and encryption.
 ## Current State - Refactoring towards a Generic Data API
 
 The generic, templated `save`/`load` API has landed. The library no longer ships its own data type.
-A full README rewrite is still pending, so parts of this README outside the API sections may be stale.
 
 ---
 
@@ -31,11 +30,11 @@ A full README rewrite is still pending, so parts of this README outside the API 
 
 ## Overview
 
-The library offers a base implementation for data management tasks, including:
+The library covers:
 
 - Reading and writing game data to files
 - Serialization and deserialization of game data using [nlohmann/json](https://github.com/nlohmann/json)
-- Optional encryption and decryption of data using [CryptoPP](https://github.com/weidai11/cryptopp) (With the help of [CryptoPP-CMake](https://github.com/abdes/cryptopp-cmake))
+- Optional encryption and decryption of data using [CryptoPP](https://github.com/weidai11/cryptopp) (built with [CryptoPP-CMake](https://github.com/abdes/cryptopp-cmake))
 - Test suite using [Google Test](https://github.com/google/googletest), with [testcoe](https://github.com/nircoe/testcoe) adding grid visualization and crash reporting
 
 [Back to top](#table-of-contents)
@@ -45,12 +44,13 @@ The library offers a base implementation for data management tasks, including:
 - Basic error handling for file operations
 - JSON-based serialization and deserialization
 - Optional AES encryption, off by default (see [Encryption](#encryption))
-- Memory-safe implementation
-- Extensive test suite including:
-  - Basic functionality
+- Test suite covering:
+  - Saveable concept and the I/O layer
+  - Save/load round trips
   - Error handling
-  - Performance benchmarks
+  - Integration
   - Memory usage
+  - Performance benchmarks
 
 [Back to top](#table-of-contents)
 
@@ -112,7 +112,7 @@ Dependencies are downloaded with FetchContent at configure time, so the first co
 
 ### Encryption
 
-Encryption is off by default for leaner builds.
+Encryption is off by default.
 `DATACOE_ENABLE_ENCRYPTION` turns it on, and CryptoPP is downloaded, built and linked only then.
 With it off:
 
@@ -283,10 +283,12 @@ FetchContent_Declare(
 
 The project includes a test suite built with Google Test, run through a CLI dispatcher (`tests/main.cpp`) built on testcoe. Tests cover:
 
-- Basic data operations
-- Error handling and recovery
-- Performance benchmarks
+- Saveable concept and the I/O layer
+- Save/load round trips
+- Error handling
+- Integration
 - Memory usage
+- Performance benchmarks
 
 ### Running Tests
 
@@ -340,7 +342,7 @@ This fetches testcoe (and Google Test) and builds the test suite.
 
 ## Continuous Integration
 
-This project uses GitHub Actions for continuous integration to ensure code quality and compatibility across different platforms and compilers.
+CI runs on GitHub Actions on pushes and pull requests.
 
 ### CI Pipeline Status
 
@@ -350,26 +352,26 @@ This project uses GitHub Actions for continuous integration to ensure code quali
 
 ### Supported Platforms and Compilers
 
-Our CI pipeline automatically builds and tests the project with the following configurations:
+CI builds and tests the project with the following configurations:
 
 - **Windows**:
   - Visual Studio (MSVC)
   - GCC (MinGW)
-  
+
 - **Linux**:
   - GCC
   - Clang
-  
+
 - **macOS**:
   - Apple Clang
 
 Each configuration compiles the project with `DATACOE_ENABLE_ENCRYPTION=ON`
 and runs the full test suite to verify compatibility and functionality.
-The OFF build is not in CI. All supported platforms use C++23 features for maximum portability.
+The OFF build is not in CI. The Linux workflow also runs a clang-format check job.
 
 ### For [Contributors](#contributing)
 
-Pull requests will automatically trigger the CI pipeline. All checks must pass before a PR can be merged to ensure the codebase remains stable. If you encounter CI failures in your PR, please check the build logs for details on what went wrong.
+Pull requests trigger the CI pipeline. All checks must pass before a PR can be merged.
 
 [Back to top](#table-of-contents)
 
@@ -422,21 +424,16 @@ Game-specific implementations will have their own tags (e.g., `worm-v1.0.0`) to 
 
 ## Contributing
 
-Contributions to this library are welcome! Here are some ways you can contribute:
+Contributions are welcome: roadmap features, bug fixes, docs and tests.
 
-- Implementing features from the roadmap
-- Fixing bugs
-- Improving documentation
-- Adding new features not listed in the roadmap
-- Enhancing test coverage
-
-If you'd like to contribute, please:
+To contribute:
 
 1. Fork the repository
 2. Create a new branch for your feature (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Format the changed C++ files with `clang-format -i` (config is `.clang-format` at the repo root)
+4. Commit your changes (`git commit -m 'Add some amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
 [Back to top](#table-of-contents)
 
@@ -444,6 +441,7 @@ If you'd like to contribute, please:
 
 ### Implemented Features
 - Basic file input/output operations
+- Crash-safe save (write to a temp file, then rename)
 - JSON serialization using nlohmann/json
 - AES encryption/decryption using CryptoPP
 - Test suite with Google Test
@@ -452,7 +450,7 @@ If you'd like to contribute, please:
 
 ### Planned Improvements
 - Secure encryption key management (replacing fixed keys with secure storage and derivation)
-- Graceful recovery from corrupted files with backup system
+- Backup of the previous save to recover from corrupted files
 - Thread-safe operations for concurrent data access
 - Asynchronous save/load operations
 - Performance optimizations for large data sets

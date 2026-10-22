@@ -5,7 +5,7 @@
 #include <filesystem>
 
 using namespace datacoe;
-using namespace datacoe_test;
+using namespace test_utils;
 
 namespace
 {
@@ -92,8 +92,7 @@ TEST_F(IntegrationTests, MultipleFiles)
 
 TEST_F(IntegrationTests, EncryptedAndPlainFiles)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     const player_save first{"first", 10, {1}};
     const auto first_path = m_dir / "first.sav";
@@ -113,8 +112,7 @@ TEST_F(IntegrationTests, EncryptedAndPlainFiles)
 
 TEST_F(IntegrationTests, EncryptionToggleLifecycle)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     const auto path = m_dir / "toggle.sav";
 
@@ -149,8 +147,7 @@ TEST_F(IntegrationTests, CorruptionRecovery)
 
 TEST_F(IntegrationTests, EncryptedCorruptionRecovery)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     // Test 1: truncated to the prefix, load fails and saving fresh data recovers
     {

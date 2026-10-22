@@ -9,7 +9,7 @@
 #include <string>
 
 using namespace datacoe;
-using namespace datacoe_test;
+using namespace test_utils;
 
 //==============================================================================
 //                  MemoryTests - repeated and large data tests
@@ -68,8 +68,7 @@ TEST_F(MemoryTests, LargePayload)
 
 TEST_F(MemoryTests, LargeEncryptedPayload)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     player_save data{std::string(1024 * 1024, 'A'), 999999, {}};
     data.unlocked.resize(100000);
@@ -113,7 +112,7 @@ TEST_F(MemoryTests, ManyFiles)
     }
 
     // Test 2: the directory holds exactly those files, a leftover .datacoe.tmp would add one
-    const auto entries = std::distance(std::filesystem::directory_iterator(m_dir.path()),
-                                       std::filesystem::directory_iterator());
+    const auto entries =
+        std::distance(std::filesystem::directory_iterator(m_dir.path()), std::filesystem::directory_iterator());
     EXPECT_EQ(entries, file_count);
 }

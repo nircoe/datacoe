@@ -16,7 +16,8 @@ namespace datacoe
     // The body sits in an if constexpr so a type that isn't saveable only shows the static_assert message,
     // without the template error wall from nlohmann. The else branch is never reached.
     template <typename T>
-    [[nodiscard]] std::expected<void, error> save(const std::filesystem::path &path, const T &data,
+    [[nodiscard]] std::expected<void, error> save(const std::filesystem::path &path,
+                                                  const T &data,
                                                   bool encrypt = false)
     {
         static_assert(saveable<T>,
@@ -41,21 +42,18 @@ namespace datacoe
             }
             catch (const std::exception &e)
             {
-                return std::unexpected(
-                    internal::with_prefix(NAME, error{error_code::serialization_failure, e.what()}));
+                return std::unexpected(internal::with_prefix(NAME, error{error_code::serialization_failure, e.what()}));
             }
 
             if (encrypt)
             {
                 auto encrypted = internal::encrypt(text);
-                if (!encrypted)
-                    return std::unexpected(internal::with_prefix(NAME, encrypted.error()));
+                if (!encrypted) return std::unexpected(internal::with_prefix(NAME, encrypted.error()));
                 text = std::move(*encrypted);
             }
 
             auto written = internal::write_file(path, text);
-            if (!written)
-                return std::unexpected(internal::with_prefix(NAME, written.error()));
+            if (!written) return std::unexpected(internal::with_prefix(NAME, written.error()));
             return {};
         }
         else
@@ -78,14 +76,12 @@ namespace datacoe
             constexpr std::string_view NAME = "datacoe::load()";
 
             auto contents = internal::read_file(path);
-            if (!contents)
-                return std::unexpected(internal::with_prefix(NAME, contents.error()));
+            if (!contents) return std::unexpected(internal::with_prefix(NAME, contents.error()));
 
             if (internal::is_encrypted(*contents))
             {
                 auto plain = internal::decrypt(*contents);
-                if (!plain)
-                    return std::unexpected(internal::with_prefix(NAME, plain.error()));
+                if (!plain) return std::unexpected(internal::with_prefix(NAME, plain.error()));
                 contents = std::move(plain);
             }
 

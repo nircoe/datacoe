@@ -16,7 +16,7 @@
 #include <vector>
 
 using namespace datacoe;
-using namespace datacoe_test;
+using namespace test_utils;
 
 namespace
 {
@@ -190,8 +190,7 @@ TEST_F(PerformanceTests, StressTest)
 
 TEST_F(PerformanceTests, EncryptedPerformanceComparison)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     constexpr int iterations = 50;
     const auto encrypted_path = m_dir / "perf.sav";

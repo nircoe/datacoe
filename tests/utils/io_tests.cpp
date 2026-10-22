@@ -9,7 +9,7 @@
 #include <system_error>
 
 using namespace datacoe;
-using namespace datacoe_test;
+using namespace test_utils;
 
 //==============================================================================
 //                   IoTests - internal I/O layer tests
@@ -45,8 +45,7 @@ TEST_F(IoTests, IsEncrypted)
 
 TEST_F(IoTests, IsEncryptedOnEncryptOutput)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     // Test 1: output of encrypt()
     {
@@ -62,8 +61,7 @@ TEST_F(IoTests, IsEncryptedOnEncryptOutput)
 
 TEST_F(IoTests, EncryptDecrypt)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     // Test 1: round trip for different kinds of text
     {
@@ -72,12 +70,8 @@ TEST_F(IoTests, EncryptDecrypt)
             long_text.push_back(static_cast<char>('a' + i % 26));
 
         const std::string texts[] = {
-            "short text",
-            "",
-            std::string(16, 'a'),
-            std::string(17, 'b'),
-            long_text,
-            "h\xc3\xa9llo w\xc3\xb6rld \xe2\x82\xac",
+            "short text",         "",        std::string(16, 'a'),
+            std::string(17, 'b'), long_text, "h\xc3\xa9llo w\xc3\xb6rld \xe2\x82\xac",
         };
 
         for (const auto &text : texts)
@@ -121,8 +115,7 @@ TEST_F(IoTests, EncryptDecrypt)
 
 TEST_F(IoTests, GoldenOldSave)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     // Test 1: a save from the first datacoe format still decrypts
     const auto decrypted = internal::decrypt(GOLDEN_ENCRYPTED_SAVE);

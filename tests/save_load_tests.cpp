@@ -10,7 +10,7 @@
 #include <system_error>
 
 using namespace datacoe;
-using namespace datacoe_test;
+using namespace test_utils;
 
 namespace
 {
@@ -92,8 +92,7 @@ TEST_F(SaveLoadTests, PlainRoundTrip)
 
 TEST_F(SaveLoadTests, EncryptedRoundTrip)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     // Test 1: file is encrypted on disk and load needs no flag
     {
@@ -110,8 +109,7 @@ TEST_F(SaveLoadTests, EncryptedRoundTrip)
 
 TEST_F(SaveLoadTests, EncryptionSwitching)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     const auto path = m_dir / "switching.sav";
 
@@ -130,8 +128,7 @@ TEST_F(SaveLoadTests, EncryptionSwitching)
 
 TEST_F(SaveLoadTests, GoldenOldEncryptedSave)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     // Test 1: a save from the first datacoe format still loads
     {
@@ -148,8 +145,7 @@ TEST_F(SaveLoadTests, GoldenOldEncryptedSave)
 
 TEST_F(SaveLoadTests, EncryptionDisabled)
 {
-    if constexpr (DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION to be off";
+    if constexpr (DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION to be off";
 
     // Test 1: asking for an encrypted save fails and nothing is written
     {
@@ -313,8 +309,7 @@ TEST_F(SaveLoadTests, FailedWriteKeepsExistingSave)
 
 TEST_F(SaveLoadTests, FailedWriteKeepsExistingEncryptedSave)
 {
-    if constexpr (!DATACOE_ENABLE_ENCRYPTION)
-        GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
+    if constexpr (!DATACOE_ENABLE_ENCRYPTION) GTEST_SKIP() << "needs DATACOE_ENABLE_ENCRYPTION";
 
     std::error_code ec;
     const player_save original{"original", 1, {1, 2}};

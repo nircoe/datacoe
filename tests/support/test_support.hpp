@@ -19,7 +19,7 @@
     #include <unistd.h>
 #endif
 
-namespace datacoe_test
+namespace test_utils
 {
     struct player_save
     {
@@ -66,13 +66,9 @@ namespace datacoe_test
         explicit no_default_save(int);
     };
 
-    inline void to_json(nlohmann::json &, const no_default_save &)
-    {
-    }
+    inline void to_json(nlohmann::json &, const no_default_save &) { }
 
-    inline void from_json(const nlohmann::json &, no_default_save &)
-    {
-    }
+    inline void from_json(const nlohmann::json &, no_default_save &) { }
 
     inline int process_id()
     {
@@ -149,4 +145,4 @@ namespace datacoe_test
         "ctT8c1rX0d4fDw==\n";
 
     inline const std::string GOLDEN_PLAIN_JSON = R"({"highscore":7,"nickname":"golden"})";
-} // namespace datacoe_test
+} // namespace test_utils

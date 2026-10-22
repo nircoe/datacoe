@@ -2,7 +2,7 @@ enable_testing()
 
 datacoe_ignore_external_warnings(testcoe_headers)
 
-set(TEST_FILES
+set(test_files
     saveable_tests.cpp
     utils/io_tests.cpp
     save_load_tests.cpp
@@ -14,7 +14,7 @@ set(TEST_FILES
 
 add_executable(datacoe_tests
     main.cpp
-    ${TEST_FILES}
+    ${test_files}
 )
 
 target_link_libraries(datacoe_tests
@@ -37,7 +37,7 @@ add_test(NAME datacoe_tests COMMAND datacoe_tests)
 
 option(DATACOE_BUILD_INDIVIDUAL_TESTS "Build individual test executables" OFF)
 if(DATACOE_BUILD_INDIVIDUAL_TESTS)
-    foreach(test_file ${TEST_FILES})
+    foreach(test_file ${test_files})
         get_filename_component(test_name ${test_file} NAME_WE)
 
         add_executable(${test_name} ${test_file})
