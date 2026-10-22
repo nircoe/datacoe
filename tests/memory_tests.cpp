@@ -9,7 +9,7 @@
 #include <string>
 
 using namespace datacoe;
-using namespace datacoe_test;
+using namespace test_utils;
 
 //==============================================================================
 //                  MemoryTests - repeated and large data tests

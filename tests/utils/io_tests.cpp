@@ -9,7 +9,7 @@
 #include <system_error>
 
 using namespace datacoe;
-using namespace datacoe_test;
+using namespace test_utils;
 
 //==============================================================================
 //                   IoTests - internal I/O layer tests
